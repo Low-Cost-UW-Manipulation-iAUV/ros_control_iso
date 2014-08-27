@@ -100,10 +100,16 @@ bool ISO_Relay::init(hardware_interface::EffortJointInterface* hw, ros::NodeHand
 
   } 
   // get the joint object to use in the realtime loop
-  try FIXME
+  try{
   joint_ = hw->getHandle(my_joint);  // throws on failure
 
-  catch FIXME
+  }
+  catch (...) {
+    ROS_ERROR("ros_control - ros_control_iso: Exception happened - Could not get handle of the joint");
+  }
+
+   // Start realtime state publisher
+  controller_state_publisher_.reset(new realtime_tools::RealtimePublisher<control_msgs::JointControllerState>(n, "state", 1));
 
   return EXIT_SUCCESS;
 }
@@ -152,6 +158,7 @@ void ISO_Relay_linear::update(const ros::Time& time, const ros::Duration& period
     switcher.strictness = STRICT; //STRICT==2
     ros::service::call("/controller_manager/switch_controller", switcher);    
   }
+
 
 }
 
@@ -254,7 +261,15 @@ int do_Identification_Switched(int rising_falling){
   }
   //reset the maximum position encountered
   maxPosition_encountered = -std::numeric_limits<double>::max();
-  minPosition_encountered  = std::numeric_limits<double>::max();    
+  minPosition_encountered  = std::numeric_limits<double>::max(); 
+
+//Publish the state using the realtime safe way.
+  if(controller_state_publisher_ && controller_state_publisher_->trylock()){
+    controller_state_publisher_->msg.header.stamp = time;
+    controller_state_publisher_->msg.set_point = joint_.getCommand();
+    controller_state_publisher_->msg.process_value = error;
+    controller_state_publisher_->msg.command = relay_amplitude_out;
+  }   
 
   return EXIT_SUCCESS;
 }
