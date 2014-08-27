@@ -2,7 +2,7 @@
 	<name>ros_control_iso</name>
 	<version>0.0.1</version>
 	<description>ros_control_iso</description>
-	<maintainer email="raphael.nage (#) posteo de">Raphael Nagel</maintainer>
+	<maintainer email="raphael.nagel@posteo.de">Raphael Nagel</maintainer>
 	<license>GPLv2</license>
 	<url type="repository">https://github.com/compiaffe/ros_control_iso</url>
 	<author>Raphael Nagel </author>
