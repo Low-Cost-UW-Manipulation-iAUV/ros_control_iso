@@ -18,7 +18,7 @@
 #include <hardware_interface/joint_command_interface.h>
 #include <pluginlib/class_list_macros.h>
 #include <labust/math/NumberManipulation.hpp>
-#include "include/ros_control_iso/relay_with_hysteresis.hpp"
+#include <include/ros_control_iso/relay_with_hysteresis.hpp>
 using ros_control_iso;
 
 /** init() gets called when the relay ros_controller is being loaded
