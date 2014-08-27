@@ -1,3 +1,6 @@
+cmake_minimum_required(VERSION 2.8.3)
+project(ros_control_iso)
+
 # Load catkin and all dependencies required for this package
 find_package(catkin REQUIRED COMPONENTS
 controller_interface
@@ -38,7 +41,7 @@ ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
-install(FILES effort_controllers_plugins.xml
+install(FILES relay_with_hysteresis.xml
 DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 endif()
 
