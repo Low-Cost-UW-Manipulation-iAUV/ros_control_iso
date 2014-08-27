@@ -30,6 +30,6 @@
 	<run_depend>snippets</run_depend>
 
 	<export>
-		<controller_interface plugin="${prefix}/relay_with_hysteresis.xml"/>
+		<ros_control_iso plugin="${prefix}/relay_with_hysteresis.xml"/>
 	</export>
 </package>
