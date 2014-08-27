@@ -1,5 +1,6 @@
 <launch>
   <rosparam command="load" file="$(find rosparam)/I-SO.yaml" />
-  <node pkg="controller_manager" type="spawner" args="--stopped relay_with_hysteresis" />
+  
+  <node name="controller_spawner" pkg="controller_manager" type="spawner" args="--stopped relay_with_hysteresis" />
 
 </launch>

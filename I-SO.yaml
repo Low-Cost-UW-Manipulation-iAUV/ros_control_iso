@@ -1,4 +1,4 @@
-I-SO: #The Identification by Self-Oscillation parameter server parameter initialisation yaml file
+ros_control_iso: #The Identification by Self-Oscillation parameter server parameter initialisation yaml file
 	joint		: x
 	parameters	:
 		sampling_rate						: 500
@@ -13,3 +13,12 @@ I-SO: #The Identification by Self-Oscillation parameter server parameter initial
 		k_xx	: 0
 		delta	: 0
 		omega_n	: 0
+  # Publish all joint states -----------------------------------
+ 	joint_state_controller:
+    	type: joint_state_controller/JointStateController
+    	publish_rate: 50  
+
+  # Position Controllers ---------------------------------------
+	relay_with_hysteresis:
+   		type: ros_control_iso/relay_with_hysteresis
+    	joint: x

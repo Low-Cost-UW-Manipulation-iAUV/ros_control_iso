@@ -153,6 +153,7 @@ void ISO_Relay_linear::update(const ros::Time& time, const ros::Duration& period
   if(finished == TRUE){
     ROS_INFO("ros_control - ros_control_iso: Identified the following paramters for axis %s: alpha: %f, k_x: %f, k_xx: %f, delta: %f, omega_n: %f. \n", my_joint, params[ALPHA], params[KX], params[KXX], params[DELTA], params[OMEGA_N]);
 
+    //Unload the relay
     controller_manager::SwitchController switcher;
     switcher.stop_controllers="relay_with_hysteresis";
     switcher.strictness = STRICT; //STRICT==2

@@ -1,12 +1,14 @@
 <package>
-	<name>effort_controllers</name>
+	<name>ros_control_iso</name>
 	<version>0.0.1</version>
 	<description>ros_control_iso</description>
 	<maintainer email="raphael.nage (#) posteo de">Raphael Nagel</maintainer>
 	<license>GPLv2</license>
 	<url type="repository">https://github.com/compiaffe/ros_control_iso</url>
 	<author>Raphael Nagel/author>
+	
 	<buildtool_depend>catkin</buildtool_depend>
+
 	<build_depend>angles</build_depend>
 	<build_depend>controller_interface</build_depend>
 	<build_depend>control_msgs</build_depend>
