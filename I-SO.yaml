@@ -1,0 +1,15 @@
+I-SO: #The Identification by Self-Oscillation parameter server parameter initialisation yaml file
+	joint		: x
+	parameters	:
+		sampling_rate						: 500
+		identification_length				: 10
+		relay_upper_limit_limit_inMeters	: 0.2
+		relay_lower_limit_limit_inMeters	: -0.2
+		relay_amplitude_out_inNewtons		: 5
+		position_reference					: 0
+	solution:
+		alpha	: 0
+		k_xx	: 0
+		k_xx	: 0
+		delta	: 0
+		omega_n	: 0
