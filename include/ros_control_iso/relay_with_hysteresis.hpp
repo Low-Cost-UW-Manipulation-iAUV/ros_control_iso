@@ -10,7 +10,7 @@
 *   https://github.com/labust/labust-ros-pkg/tree/master/ident_so
 *
 *   further modified by Raphael Nagel
-*   raphael.nagel@posteo.de
+*   raphael.nagel (#) posteo de
 *   18/Aug/2014
 *///////////////////////////////////////////////////////////////////////
 #ifndef __RELAY_W_HYSTERESIS__
@@ -38,7 +38,7 @@
 #define NUMPARAMS 5
 
 
-namespace controller_ns{
+namespace ros_control_iso{
 
 	class ISO_Relay : public controller_interface::Controller<hardware_interface::EffortJointInterface>
 	{
