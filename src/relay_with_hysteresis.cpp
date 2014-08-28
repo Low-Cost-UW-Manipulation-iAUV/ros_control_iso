@@ -15,8 +15,10 @@
 
 
 #include <controller_interface/controller.h>
+#include <controller_manager_msgs/SwitchController.h>
 #include <hardware_interface/joint_command_interface.h>
 #include <pluginlib/class_list_macros.h>
+
 #include <labust/math/NumberManipulation.hpp>
 #include <ros_control_iso/relay_with_hysteresis.hpp>
 
@@ -28,10 +30,9 @@ namespace ros_control_iso{
   * \author Raphael Nagel
   * \date 18/Aug/2014
   **************************************** */
-  bool ISO_Relay::init(hardware_interface::EffortJointInterface* hw, ros::NodeHandle &n)
+  bool relay_with_hysteresis::init(hardware_interface::EffortJointInterface* hw, ros::NodeHandle &n)
   {
 
-    position_reference = 0;
     current_position= 0;
     position_error = 0;
 
@@ -55,32 +56,37 @@ namespace ros_control_iso{
       return EXIT_FAILURE;
     }
 
-    //Determining wether linear or angular procedures should be used
-    switch(my_joint){
-      case x:
-      case y:
-      case z:
-        linear_or_angular = LINEAR;
-        break;
+    // get the joint object to use in the realtime loop
+    try{
+    joint_ = hw->getHandle(my_joint);  // throws on failure
 
-      case yaw:
-      case pitch:
-      case roll:
-        linear_or_angular = ANGULAR;
-        break;
-
-      default:
-        ROS_ERROR("ros_control - ros_control_iso: No valid joint referenced, ending\n");
-        return EXIT_FAILURE;
     }
+    catch (...) {
+      ROS_ERROR("ros_control - ros_control_iso: Exception happened - Could not get handle of the joint");
+    }
+
+
+
+    //Determining wether linear or angular procedures should be used
+    if((my_joint == "x") || (my_joint == "y") || (my_joint == "z")) {
+      linear_or_angular = LINEAR;
+
+    }else if( (my_joint == "yaw") || (my_joint == "pitch") || (my_joint == "roll") ) {
+      linear_or_angular = ANGULAR;
+   
+    }else{
+      ROS_ERROR("ros_control - ros_control_iso: No valid joint referenced, ending\n");
+      return EXIT_FAILURE;
+    }
+
 
     if (!n.getParam("/ros_control_iso/parameters/sampling_rate", sampling_rate)){
       ROS_ERROR("ros_control - ros_control_iso: Could not find sampling_rate\n");
       return EXIT_FAILURE;
     }
 
-  //How many cycles (full waveforms) do we keep track of for the purpose of the identification:
-    if (!n.getParam("/ros_control_iso/parameters/identification_length", identlen)){
+  ///How many cycles (full waveforms) do we keep track of for the purpose of the identification:
+    if (!n.getParam("/ros_control_iso/parameters/identification_length", identLen)){
       ROS_ERROR("ros_control - ros_control_iso: Could not find identification length, assuming 10. \n");
       identLen = 0;
     }
@@ -98,19 +104,19 @@ namespace ros_control_iso{
     }            
     if (!n.getParam("/ros_control_iso/parameters/position_reference", position_reference)){
       ROS_ERROR("ros_control - ros_control_iso: Could not find position_referenc, assuming 0\n");
-
+      position_reference = 0;
     } 
-    // get the joint object to use in the realtime loop
-    try{
-    joint_ = hw->getHandle(my_joint);  // throws on failure
-
-    }
-    catch (...) {
-      ROS_ERROR("ros_control - ros_control_iso: Exception happened - Could not get handle of the joint");
-    }
+    if (!n.getParam("/ros_control_iso/parameters/e_max_error", eMaxError)){
+      ROS_ERROR("ros_control - ros_control_iso: Could not find e_max_error, assuming 0.1\n");
+      eMaxError = 0.1;
+    } 
+    if (!n.getParam("/ros_control_iso/parameters/e_min_error", eMinError)){
+      ROS_ERROR("ros_control - ros_control_iso: Could not find e_min_error, assuming 0.1\n");
+      eMinError = 0.1;
+    }     
 
      // Start realtime state publisher
-    controller_state_publisher_.reset(new realtime_tools::RealtimePublisher<control_msgs::JointControllerState>(n, "state", 1));
+    controller_state_publisher_.reset(new realtime_tools::RealtimePublisher<control_msgs::JointControllerState>(n, "state", 1) );
 
     return EXIT_SUCCESS;
   }
@@ -121,7 +127,7 @@ namespace ros_control_iso{
   * \author Raphael Nagel
   * \date 18/Aug/2014
   **************************************** */
-  void ISO_Relay_linear::update(const ros::Time& time, const ros::Duration& period){
+  void relay_with_hysteresis::update(const ros::Time& time, const ros::Duration& period){
     current_position = joint_.getPosition();
     
     do_Identification_Step();
@@ -132,7 +138,7 @@ namespace ros_control_iso{
     if( (current_position > relay_upper_limit) && ( joint_.getCommand() == ( relay_amplitude_out) ) ){         
    
       joint_.setCommand((-1) * relay_amplitude_out);
-      do_Identification_Switched(RISING_EDGE);
+      do_Identification_Switched(RISING_EDGE, time);
       do_Identification_Parameter_Calculation();
     }
 
@@ -140,7 +146,7 @@ namespace ros_control_iso{
     if( ( current_position < relay_lower_limit) && ( joint_.getCommand() == ( (-1) * relay_amplitude_out) ) ){    
    
       joint_.setCommand(relay_amplitude_out);
-      do_Identification_Switched(FALLING_EDGE);
+      do_Identification_Switched(FALLING_EDGE, time);
       do_Identification_Parameter_Calculation();
    
     }
@@ -151,12 +157,12 @@ namespace ros_control_iso{
     }
 
     if(finished == TRUE){
-      ROS_INFO("ros_control - ros_control_iso: Identified the following paramters for axis %s: alpha: %f, k_x: %f, k_xx: %f, delta: %f, omega_n: %f. \n", my_joint, params[ALPHA], params[KX], params[KXX], params[DELTA], params[OMEGA_N]);
+      ROS_INFO("ros_control - ros_control_iso: Identified the following paramters for axis %s: alpha: %f, k_x: %f, k_xx: %f, delta: %f, omega_n: %f. \n", my_joint.c_str(), params[ALPHA], params[KX], params[KXX], params[DELTA], params[OMEGA_N]);
 
       //Unload the relay
-      controller_manager::SwitchController switcher;
-      switcher.stop_controllers="relay_with_hysteresis";
-      switcher.strictness = STRICT; //STRICT==2
+      controller_manager_msgs::SwitchController switcher;
+      switcher.request.stop_controllers.push_back("relay_with_hysteresis");
+      switcher.request.strictness = STRICT; //STRICT==2
       ros::service::call("/controller_manager/switch_controller", switcher);    
     }
 
@@ -169,7 +175,7 @@ namespace ros_control_iso{
   * \author Raphael Nagel
   * \date 18/Aug/2014
   **************************************** */
-  void ISO_Relay_linear::starting(const ros::Time& time) { 
+  void relay_with_hysteresis::starting(const ros::Time& time) { 
     position_reference = 0;
     current_position= 0;
     position_error = 0;
@@ -196,8 +202,8 @@ namespace ros_control_iso{
   * \author Raphael Nagel
   * \date 18/Aug/2014
   **************************************** */
-  void ISO_Relay_linear::stopping(const ros::Time& time) { 
-    joint_setCommand(0);
+  void relay_with_hysteresis::stopping(const ros::Time& time) { 
+    joint_.setCommand(0);
     ROS_INFO("ros_control - ros_control_iso: Relay is stopping, output set to 0\n");
   }
 
@@ -209,14 +215,14 @@ namespace ros_control_iso{
   * \author Raphael Nagel
   * \date 18/Aug/2014
   **************************************** */
-  void do_Identification_Step(void){
+  void relay_with_hysteresis::do_Identification_Step(void){
     //Update the variables for the identification
     position_error = position_reference - current_position;
     tSum += 1/sampling_rate; //measure the time during this half waveform
 
 
     //Handle angular values and angular wrapping
-    if (linear_or_angular == ANGLULAR){
+    if (linear_or_angular == ANGULAR){
       position_error = labust::math::wrapRad(
           labust::math::wrapRad(position_reference) - labust::math::wrapRad(current_position)
         );
@@ -241,16 +247,16 @@ namespace ros_control_iso{
   * \author Raphael Nagel
   * \date 18/Aug/2014
   **************************************** */
-  int do_Identification_Switched(int rising_falling){
+  int relay_with_hysteresis::do_Identification_Switched(int rising_falling, const ros::Time& time){
     if(rising_falling == RISING_EDGE){
-      xa_high[counterHigh] = error; //the position value when the switch acctually happened (this might differ from when we wanted it to happen due to delay in the system)
+      xa_high[counterHigh] = position_error; //the position value when the switch acctually happened (this might differ from when we wanted it to happen due to delay in the system)
       e_min[counterLow] = minPosition_encountered;   //The minimum position value ever encountered during this half waveform
       t_min[counterLow] = tSum;     //the time taken for this half waveform
       tSum = 0;
       counterLow=(counterLow+1)%identLen;
 
     }else if (rising_falling == FALLING_EDGE){
-      xa_low[counterLow] = error;
+      xa_low[counterLow] = position_error;
       e_max[counterHigh] = maxPosition_encountered;
       t_max[counterHigh] = tSum;
       tSum = 0;
@@ -266,10 +272,10 @@ namespace ros_control_iso{
 
   //Publish the state using the realtime safe way.
     if(controller_state_publisher_ && controller_state_publisher_->trylock()){
-      controller_state_publisher_->msg.header.stamp = time;
-      controller_state_publisher_->msg.set_point = joint_.getCommand();
-      controller_state_publisher_->msg.process_value = error;
-      controller_state_publisher_->msg.command = relay_amplitude_out;
+      controller_state_publisher_->msg_.header.stamp = time;
+      controller_state_publisher_->msg_.set_point = joint_.getCommand();
+      controller_state_publisher_->msg_.process_value = position_error;
+      controller_state_publisher_->msg_.command = relay_amplitude_out;
     }   
 
     return EXIT_SUCCESS;
@@ -280,10 +286,10 @@ namespace ros_control_iso{
   * \author Raphael Nagel
   * \date 18/Aug/2014
   **************************************** */
-  void do_Identification_Parameter_Calculation(void){
+  void relay_with_hysteresis::do_Identification_Parameter_Calculation(void){
 
     double meanEMax = labust::math::mean(e_max);
-    double stdEMax(labust::math::std2(e_max, meanEMax);
+    double stdEMax = labust::math::std2(e_max, meanEMax);
 
     double meanEMin = labust::math::mean(e_min);
     double stdEMin = labust::math::std2(e_min, meanEMin);
@@ -330,7 +336,7 @@ namespace ros_control_iso{
   * \author Raphael Nagel
   * \date 26/Aug/2014
   **************************************** */
-  int store_I_SO_Solution(void){
+  int relay_with_hysteresis::store_I_SO_Solution(void){
     double test = 0;
 
     ros::param::set("/ros_control_iso/solution/alpha", params[ALPHA]);
@@ -372,4 +378,4 @@ namespace ros_control_iso{
   }
 }
 
-PLUGINLIB_DECLARE_CLASS( ros_control_iso::relay_with_hysteresis, controller_interface::ControllerBase)
+PLUGINLIB_EXPORT_CLASS( ros_control_iso::relay_with_hysteresis, controller_interface::ControllerBase)

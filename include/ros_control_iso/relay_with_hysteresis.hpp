@@ -17,9 +17,17 @@
 #define __RELAY_W_HYSTERESIS__
 
 
-#include <controller_interface/controller.h>
+#include <ros/node_handle.h>
+//#include <urdf/model.h>
+#include <boost/scoped_ptr.hpp>
+#include <boost/thread/condition.hpp>
+#include <realtime_tools/realtime_publisher.h>
 #include <hardware_interface/joint_command_interface.h>
-#include <pluginlib/class_list_macros.h>
+#include <controller_interface/controller.h>
+#include <control_msgs/JointControllerState.h>
+#include <std_msgs/Float64.h>
+#include <control_msgs/JointControllerState.h>
+#include <realtime_tools/realtime_buffer.h>
 
 #define LINEAR 0
 #define ANGULAR 1
@@ -37,20 +45,22 @@
 #define OMEGA_N 4
 #define NUMPARAMS 5
 
+#define STRICT 2
+
 
 namespace ros_control_iso{
 
-	class ISO_Relay : public controller_interface::Controller<hardware_interface::EffortJointInterface>
+	class relay_with_hysteresis : public controller_interface::Controller<hardware_interface::EffortJointInterface>
 	{
 	public:
-	 	bool init(hardware_interface::EffortJointInterface* hw, ros::NodeHandle &n);
-		void update(const ros::Time& time, const ros::Duration& period);
-		void starting(const ros::Time& time);
-		void stopping(const ros::Time& time); 
+	 	bool init(hardware_interface::EffortJointInterface* , ros::NodeHandle& );
+		void update(const ros::Time& , const ros::Duration& period);
+		void starting(const ros::Time& );
+		void stopping(const ros::Time& ); 
 	private:
-		int do_Identification_Step(void);
-		int do_Identification_Switched(int);
-		int do_Identification_Parameter_Calculation(void);
+		void do_Identification_Step(void);
+		int do_Identification_Switched(int,  const ros::Time&);
+		void do_Identification_Parameter_Calculation(void);
 		int store_I_SO_Solution(void);
 
 
@@ -60,26 +70,35 @@ namespace ros_control_iso{
 
 		double sampling_rate;
 		
-		hardware_interface::JointHandle joint_;
 		double relay_upper_limit;
 		double relay_lower_limit;
 		double relay_amplitude_out;
 		double position_reference;
 		bool linear_or_angular;
 
-		double maxPosition;
-		double minPosition;
+		double maxPosition_encountered;
+		double minPosition_encountered;
 
 		double tSum;
-		double identLen;
+		int identLen;
+		int counterHigh;
+		int counterLow;
 
 		bool finished;
 		double minMaxError;
+		double eMaxError;
+		double eMinError;
 
 		std::string my_joint;
 
+		
 		std::vector<double> e_max, e_min, t_max, t_min, xa_high, xa_low;
 		std::vector<double> params;
+
+		hardware_interface::JointHandle joint_;
+ 		//realtime_tools::RealtimeBuffer<Commands> command_;
+ 		//Commands command_struct_; // pre-allocated memory that is re-used to set the realtime buffer 		
+		boost::scoped_ptr <realtime_tools::RealtimePublisher <control_msgs::JointControllerState> > controller_state_publisher_ ;
 
 	};
 };
