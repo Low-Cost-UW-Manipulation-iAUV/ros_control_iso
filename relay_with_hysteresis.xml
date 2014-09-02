@@ -1,5 +1,5 @@
-<library path="lib/ros_control_iso/relay_with_hysteresis">
-  <class name="ros_control_iso/relay_with_hysteresis" type="effort_controllers::JointPositionController" base_class_type="controller_interface::ControllerBase">
+<library path="lib/libros_control_iso">
+  <class name="ros_control_iso/relay_with_hysteresis" type="ros_control_iso::relay_with_hysteresis" base_class_type="controller_interface::ControllerBase">
     <description>
       The JointPositionController tracks position commands. It expects a EffortJointInterface type of hardware interface.
      </description>

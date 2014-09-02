@@ -4,8 +4,10 @@ project(ros_control_iso)
 # Load catkin and all dependencies required for this package
 find_package(catkin REQUIRED COMPONENTS
 controller_interface
+hardware_interface
+pluginlib
 control_msgs
-forward_command_controller
+#forward_command_controller
 control_toolbox
 realtime_tools
 urdf
@@ -23,6 +25,7 @@ control_toolbox
 realtime_tools
 urdf
 forward_command_controller
+pluginlib
 INCLUDE_DIRS include
 LIBRARIES ${PROJECT_NAME}
 )
@@ -41,7 +44,9 @@ ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
-install(FILES relay_with_hysteresis.xml
+install(FILES 	relay_with_hysteresis.xml
+				I-SO.yaml
+				relay_with_hysteresis.launch
 DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
 

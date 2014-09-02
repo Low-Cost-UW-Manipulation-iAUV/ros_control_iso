@@ -80,8 +80,8 @@ namespace ros_control_iso{
     }
 
 
-    if (!n.getParam("/ros_control_iso/parameters/sampling_rate", sampling_rate)){
-      ROS_ERROR("ros_control - ros_control_iso: Could not find sampling_rate\n");
+    if (!n.getParam("/ros_control_iso/parameters/update_rate", update_rate)){
+      ROS_ERROR("ros_control - ros_control_iso: Could not find update_rate\n");
       return EXIT_FAILURE;
     }
 
@@ -114,11 +114,13 @@ namespace ros_control_iso{
       ROS_ERROR("ros_control - ros_control_iso: Could not find e_min_error, assuming 0.1\n");
       eMinError = 0.1;
     }     
-
+    ROS_INFO("ros_control - ros_control_iso: Loaded all parameters, starting the realtime publisher.\n");
      // Start realtime state publisher
-    controller_state_publisher_.reset(new realtime_tools::RealtimePublisher<control_msgs::JointControllerState>(n, "state", 1) );
+   // controller_state_publisher_.reset(new realtime_tools::RealtimePublisher<control_msgs::JointControllerState>(n, "state", 1) );
+   // ROS_INFO("ros_control - ros_control_iso: RealtimePublisher started\n");
 
-    return EXIT_SUCCESS;
+    //return EXIT_SUCCESS;
+    return 1;
   }
 
   /** update(...) implements the asynchronous relay update step
@@ -128,6 +130,8 @@ namespace ros_control_iso{
   * \date 18/Aug/2014
   **************************************** */
   void relay_with_hysteresis::update(const ros::Time& time, const ros::Duration& period){
+    //ROS_INFO("ros_control - ros_control_iso: Updating the controller output.\n");
+
     current_position = joint_.getPosition();
     
     do_Identification_Step();
@@ -161,7 +165,7 @@ namespace ros_control_iso{
 
       //Unload the relay
       controller_manager_msgs::SwitchController switcher;
-      switcher.request.stop_controllers.push_back("relay_with_hysteresis");
+      switcher.request.stop_controllers.push_back("ros_control_iso");
       switcher.request.strictness = STRICT; //STRICT==2
       ros::service::call("/controller_manager/switch_controller", switcher);    
     }
@@ -176,6 +180,8 @@ namespace ros_control_iso{
   * \date 18/Aug/2014
   **************************************** */
   void relay_with_hysteresis::starting(const ros::Time& time) { 
+    ROS_INFO("ros_control - ros_control_iso: starting the controller. \n");
+
     position_reference = 0;
     current_position= 0;
     position_error = 0;
@@ -192,6 +198,8 @@ namespace ros_control_iso{
 
     finished = FALSE;
     minMaxError = std::numeric_limits<double>::max();
+    ///Start the procedure off
+    joint_.setCommand(relay_amplitude_out);
 
     ROS_INFO("ros_control - ros_control_iso: Relay has been reset, running now \n");
   }
@@ -218,7 +226,7 @@ namespace ros_control_iso{
   void relay_with_hysteresis::do_Identification_Step(void){
     //Update the variables for the identification
     position_error = position_reference - current_position;
-    tSum += 1/sampling_rate; //measure the time during this half waveform
+    tSum += 1/update_rate; //measure the time during this half waveform
 
 
     //Handle angular values and angular wrapping
@@ -270,6 +278,7 @@ namespace ros_control_iso{
     maxPosition_encountered = -std::numeric_limits<double>::max();
     minPosition_encountered  = std::numeric_limits<double>::max(); 
 
+  /*
   //Publish the state using the realtime safe way.
     if(controller_state_publisher_ && controller_state_publisher_->trylock()){
       controller_state_publisher_->msg_.header.stamp = time;
@@ -277,7 +286,7 @@ namespace ros_control_iso{
       controller_state_publisher_->msg_.process_value = position_error;
       controller_state_publisher_->msg_.command = relay_amplitude_out;
     }   
-
+*/
     return EXIT_SUCCESS;
   }
   /** do_Identification_Parameter_Calculation() calculates the Systems characteristic parameters

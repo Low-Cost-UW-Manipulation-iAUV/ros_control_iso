@@ -68,7 +68,7 @@ namespace ros_control_iso{
 
 		double position_error;
 
-		double sampling_rate;
+		double update_rate;
 		
 		double relay_upper_limit;
 		double relay_lower_limit;
