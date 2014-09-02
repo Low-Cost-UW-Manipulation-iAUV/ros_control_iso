@@ -3,8 +3,8 @@ ros_control_iso: #The Identification by Self-Oscillation parameter server parame
   parameters :
     update_rate : 50
     identification_length : 10
-    relay_upper_limit_limit_inMeters : 0.2
-    relay_lower_limit_limit_inMeters : -0.2
+    relay_upper_limit_limit : 0.2
+    relay_lower_limit_limit : -0.2
     relay_amplitude_out_inNewtons : 5
     position_reference : 0
     e_max_error : 0.1

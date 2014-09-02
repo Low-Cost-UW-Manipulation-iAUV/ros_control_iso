@@ -90,11 +90,11 @@ namespace ros_control_iso{
       ROS_ERROR("ros_control - ros_control_iso: Could not find identification length, assuming 10. \n");
       identLen = 0;
     }
-    if (!n.getParam("/ros_control_iso/parameters/relay_upper_limit_limit_inMeters", relay_upper_limit)){
+    if (!n.getParam("/ros_control_iso/parameters/relay_upper_limit_limit", relay_upper_limit)){
       ROS_ERROR("ros_control - ros_control_iso: Could not find upper relay switching threshold\n");
       return EXIT_FAILURE;
     }
-    if (!n.getParam("/ros_control_iso/parameters/relay_lower_limit_limit_inMeters", relay_lower_limit)){
+    if (!n.getParam("/ros_control_iso/parameters/relay_lower_limit_limit", relay_lower_limit)){
       ROS_ERROR("ros_control - ros_control_iso: Could not find lower relay switching threshold\n");
       return EXIT_FAILURE;
     }
@@ -116,8 +116,8 @@ namespace ros_control_iso{
     }     
     ROS_INFO("ros_control - ros_control_iso: Loaded all parameters, starting the realtime publisher.\n");
      // Start realtime state publisher
-   // controller_state_publisher_.reset(new realtime_tools::RealtimePublisher<control_msgs::JointControllerState>(n, "state", 1) );
-   // ROS_INFO("ros_control - ros_control_iso: RealtimePublisher started\n");
+    controller_state_publisher_.reset(new realtime_tools::RealtimePublisher<control_msgs::JointControllerState>(n, "state", 1) );
+    ROS_INFO("ros_control - ros_control_iso: RealtimePublisher started\n");
 
     //return EXIT_SUCCESS;
     return 1;
@@ -198,6 +198,7 @@ namespace ros_control_iso{
 
     finished = FALSE;
     minMaxError = std::numeric_limits<double>::max();
+
     ///Start the procedure off
     joint_.setCommand(relay_amplitude_out);
 
@@ -278,15 +279,14 @@ namespace ros_control_iso{
     maxPosition_encountered = -std::numeric_limits<double>::max();
     minPosition_encountered  = std::numeric_limits<double>::max(); 
 
-  /*
-  //Publish the state using the realtime safe way.
+    //Publish the state using the realtime safe way.
     if(controller_state_publisher_ && controller_state_publisher_->trylock()){
       controller_state_publisher_->msg_.header.stamp = time;
       controller_state_publisher_->msg_.set_point = joint_.getCommand();
       controller_state_publisher_->msg_.process_value = position_error;
       controller_state_publisher_->msg_.command = relay_amplitude_out;
     }   
-*/
+
     return EXIT_SUCCESS;
   }
   /** do_Identification_Parameter_Calculation() calculates the Systems characteristic parameters
