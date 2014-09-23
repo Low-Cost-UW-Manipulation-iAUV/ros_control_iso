@@ -20,7 +20,8 @@ ros_control_iso: #The Identification by Self-Oscillation parameter server parame
 #    type: joint_state_controller/JointStateController
 #    publish_rate: 50  
 # Position Controllers ---------------------------------------
-  type: ros_control_iso/relay_with_hysteresis
-  joint: x
-  publish_rate: 60
+  relay_with_hysteresis:
+    type: ros_control_iso/relay_with_hysteresis
+    joint: x
+    publish_rate: 60
 
