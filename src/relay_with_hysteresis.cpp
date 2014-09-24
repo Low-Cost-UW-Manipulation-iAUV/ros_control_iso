@@ -44,7 +44,8 @@ namespace ros_control_iso{
 
     counterHigh = 0;
     counterLow = 0;
-    identLen = 0;
+
+
 
     finished = FALSE;
     minMaxError = std::numeric_limits<double>::max();
@@ -64,8 +65,6 @@ namespace ros_control_iso{
     catch (...) {
       ROS_ERROR("ros_control - ros_control_iso: Exception happened - Could not get handle of the joint");
     }
-
-
 
     //Determining wether linear or angular procedures should be used
     if((my_joint == "x") || (my_joint == "y") || (my_joint == "z")) {
@@ -88,8 +87,23 @@ namespace ros_control_iso{
   ///How many cycles (full waveforms) do we keep track of for the purpose of the identification:
     if (!n.getParam("/ros_control_iso/parameters/identification_length", identLen)){
       ROS_ERROR("ros_control - ros_control_iso: Could not find identification length, assuming 10. \n");
-      identLen = 0;
+      identLen = 10;
+      n.setParam("/ros_control_iso/parameters/identification_length", identLen);  
     }
+
+
+    //now that we know the identification length resize all the vectors...    
+
+      e_max.resize(identLen);
+      e_min.resize(identLen);
+      t_max.resize(identLen);
+      t_min.resize(identLen);
+      xa_high.resize(identLen);
+      xa_low.resize(identLen);
+      
+      // 5 for number of parameters: alpha, kx, kxx, delta, omega_n
+      params.resize(5);
+
     if (!n.getParam("/ros_control_iso/parameters/relay_upper_limit_limit", relay_upper_limit)){
       ROS_ERROR("ros_control - ros_control_iso: Could not find upper relay switching threshold\n");
       return EXIT_FAILURE;
@@ -109,10 +123,12 @@ namespace ros_control_iso{
     if (!n.getParam("/ros_control_iso/parameters/e_max_error", eMaxError)){
       ROS_ERROR("ros_control - ros_control_iso: Could not find e_max_error, assuming 0.1\n");
       eMaxError = 0.1;
+      n.setParam("/ros_control_iso/parameters/e_max_error", eMaxError);
     } 
     if (!n.getParam("/ros_control_iso/parameters/e_min_error", eMinError)){
       ROS_ERROR("ros_control - ros_control_iso: Could not find e_min_error, assuming 0.1\n");
       eMinError = 0.1;
+      n.setParam("/ros_control_iso/parameters/e_min_error", eMinError);
     }     
     ROS_INFO("ros_control - ros_control_iso: Loaded all parameters, starting the realtime publisher.\n");
      // Start realtime state publisher
@@ -131,33 +147,38 @@ namespace ros_control_iso{
   **************************************** */
   void relay_with_hysteresis::update(const ros::Time& time, const ros::Duration& period){
     //ROS_INFO("ros_control - ros_control_iso: Updating the controller output.\n");
-
+    static double command_out = relay_amplitude_out;
     current_position = joint_.getPosition();
     
     do_Identification_Step();
    
     //Do the relay's job
 
-    //If we have crossed the threshold rising edge and we are still powering up.
+    //If we have crossed the threshold rising edge and we are still driving upwards-->drive downwards
     if( (current_position > relay_upper_limit) && ( joint_.getCommand() == ( relay_amplitude_out) ) ){         
    
-      joint_.setCommand((-1) * relay_amplitude_out);
-      do_Identification_Switched(RISING_EDGE, time);
-      do_Identification_Parameter_Calculation();
-    }
 
-    //same for going down
+      command_out = (-1) * relay_amplitude_out;
+      joint_.setCommand(command_out);
+
+      do_Identification_Switched(RISING_EDGE, time);
+
+      do_Identification_Parameter_Calculation();
+    }else
+
+    //same for going down-->start driving upwards
     if( ( current_position < relay_lower_limit) && ( joint_.getCommand() == ( (-1) * relay_amplitude_out) ) ){    
    
-      joint_.setCommand(relay_amplitude_out);
+      command_out = relay_amplitude_out;
+      joint_.setCommand(command_out);
       do_Identification_Switched(FALLING_EDGE, time);
       do_Identification_Parameter_Calculation();
    
-    }
+    }else
     if(current_position <= relay_upper_limit && current_position >= relay_lower_limit){   
       //if we are within the relay limits
     }else{
-      ROS_ERROR("ros_control - ros_control_iso: Relay update failed.\n");
+      ROS_INFO("ros_control - ros_control_iso: Outside threshold, demand force is: %f.\n", joint_.getCommand());
     }
 
     if(finished == TRUE){
@@ -170,6 +191,13 @@ namespace ros_control_iso{
       ros::service::call("/controller_manager/switch_controller", switcher);    
     }
 
+ /*  if(controller_state_publisher_ && controller_state_publisher_->trylock()){
+      controller_state_publisher_->msg_.header.stamp = time;
+      controller_state_publisher_->msg_.process_value = current_position;
+      controller_state_publisher_->msg_.command = command_out;
+      controller_state_publisher_->unlockAndPublish();
+    }     
+*/
 
   }
 
@@ -194,7 +222,6 @@ namespace ros_control_iso{
 
     counterHigh = 0;
     counterLow = 0;
-    identLen = 0;
 
     finished = FALSE;
     minMaxError = std::numeric_limits<double>::max();
@@ -262,6 +289,7 @@ namespace ros_control_iso{
       e_min[counterLow] = minPosition_encountered;   //The minimum position value ever encountered during this half waveform
       t_min[counterLow] = tSum;     //the time taken for this half waveform
       tSum = 0;
+
       counterLow=(counterLow+1)%identLen;
 
     }else if (rising_falling == FALLING_EDGE){
@@ -280,11 +308,12 @@ namespace ros_control_iso{
     minPosition_encountered  = std::numeric_limits<double>::max(); 
 
     //Publish the state using the realtime safe way.
-    if(controller_state_publisher_ && controller_state_publisher_->trylock()){
+   if(controller_state_publisher_ && controller_state_publisher_->trylock()){
       controller_state_publisher_->msg_.header.stamp = time;
       controller_state_publisher_->msg_.set_point = joint_.getCommand();
       controller_state_publisher_->msg_.process_value = position_error;
       controller_state_publisher_->msg_.command = relay_amplitude_out;
+      controller_state_publisher_->unlockAndPublish();      
     }   
 
     return EXIT_SUCCESS;
