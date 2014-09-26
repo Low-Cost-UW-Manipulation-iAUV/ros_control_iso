@@ -104,11 +104,11 @@ namespace ros_control_iso{
       // 5 for number of parameters: alpha, kx, kxx, delta, omega_n
       params.resize(5);
 
-    if (!n.getParam("/ros_control_iso/parameters/relay_upper_limit_limit", relay_upper_limit)){
+    if (!n.getParam("/ros_control_iso/parameters/relay_upper_limit", relay_upper_limit)){
       ROS_ERROR("ros_control - ros_control_iso: Could not find upper relay switching threshold\n");
       return EXIT_FAILURE;
     }
-    if (!n.getParam("/ros_control_iso/parameters/relay_lower_limit_limit", relay_lower_limit)){
+    if (!n.getParam("/ros_control_iso/parameters/relay_lower_limit", relay_lower_limit)){
       ROS_ERROR("ros_control - ros_control_iso: Could not find lower relay switching threshold\n");
       return EXIT_FAILURE;
     }
