@@ -92,6 +92,8 @@ namespace ros_control_iso{
 
 		std::string my_joint;
 
+		ros::ServiceClient stop_controller_client;
+
 		
 		std::vector<double> e_max, e_min, t_max, t_min, xa_high, xa_low;
 		std::vector<double> params;

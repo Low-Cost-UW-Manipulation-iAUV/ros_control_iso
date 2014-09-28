@@ -115,7 +115,7 @@ namespace ros_control_iso{
       return EXIT_FAILURE;
     }            
     if (!n.getParam("/ros_control_iso/parameters/position_reference", position_reference)){
-      ROS_ERROR("ros_control - ros_control_iso: Could not find position_referenc, assuming 0\n");
+      ROS_ERROR("ros_control - ros_control_iso: Could not find position_reference, assuming 0\n");
       position_reference = 0;
     } 
     if (!n.getParam("/ros_control_iso/parameters/e_max_error", eMaxError)){
@@ -132,6 +132,8 @@ namespace ros_control_iso{
      // Start realtime state publisher
     controller_state_publisher_.reset(new realtime_tools::RealtimePublisher<control_msgs::JointControllerState>(n, "state", 1) );
     ROS_INFO("ros_control - ros_control_iso: RealtimePublisher started\n");
+
+    stop_controller_client = n.serviceClient<controller_manager_msgs::SwitchController>("/controller_manager/switch_controller");
 
     //return EXIT_SUCCESS;
     return 1;
@@ -159,6 +161,7 @@ namespace ros_control_iso{
       command_out = (-1) * relay_amplitude_out;
       joint_.setCommand(command_out);
 
+      /// The control output is falling
       do_Identification_Switched(FALLING_EDGE, time);
 
       do_Identification_Parameter_Calculation();
@@ -169,6 +172,8 @@ namespace ros_control_iso{
    
       command_out = relay_amplitude_out;
       joint_.setCommand(command_out);
+
+      /// The control output is rising
       do_Identification_Switched(RISING_EDGE , time);
       do_Identification_Parameter_Calculation();
    
@@ -178,12 +183,31 @@ namespace ros_control_iso{
     if(finished == TRUE){
       ROS_INFO("ros_control - ros_control_iso: Identified the following paramters for axis %s: alpha: %f, k_x: %f, k_xx: %f, delta: %f, omega_n: %f. \n", my_joint.c_str(), params[ALPHA], params[KX], params[KXX], params[DELTA], params[OMEGA_N]);
 
-      //Unload the relay
+      /// set the thruster output to       
+      joint_.setCommand(0);
+
+      /// store the ISO solution in the parameter server
+      store_I_SO_Solution();
+      ROS_INFO("ros_control - ros_control_iso: Finished, please stop the controller.");
+     /* // Unload the relay
       controller_manager_msgs::SwitchController switcher;
-      switcher.request.start_controllers.push_back();      
-      switcher.request.stop_controllers.push_back("ros_control_iso/relay_with_hysteresis");
+      switcher.request.stop_controllers.push_back("/ros_control_iso/relay_with_hysteresis");
       switcher.request.strictness = BEST_EFFORT; //STRICT==2
-      ros::service::call("/controller_manager/switch_controller", switcher);    
+      stop_controller_client.call(switcher);
+      */
+
+      //Publish the state using the realtime safe way.
+     if(controller_state_publisher_ && controller_state_publisher_->trylock()){
+        controller_state_publisher_->msg_.header.stamp = time;
+        controller_state_publisher_->msg_.header.seq = sequence;
+        controller_state_publisher_->msg_.set_point = position_reference; // 
+        controller_state_publisher_->msg_.error = position_error;
+        controller_state_publisher_->msg_.process_value = current_position;
+        controller_state_publisher_->msg_.process_value_dot = minMaxError;
+        controller_state_publisher_->msg_.command = joint_.getCommand();
+        controller_state_publisher_->unlockAndPublish();  
+        sequence++;  
+      }         
     }
   
 
@@ -278,7 +302,6 @@ namespace ros_control_iso{
       e_min[counterLow] = minPosition_encountered;   //The minimum position value ever encountered during this half waveform
       t_min[counterLow] = tSum;     //the time taken for this half waveform
       tSum = 0;
-      ROS_INFO("xa_high: %f \n", position_error);
       counterLow=(counterLow+1)%identLen;
 
     }else if (rising_falling == FALLING_EDGE){
@@ -287,7 +310,6 @@ namespace ros_control_iso{
       t_max[counterHigh] = tSum;
       tSum = 0;
       counterHigh=(counterHigh+1)%identLen;      
-      ROS_INFO("xa_low: %f \n", position_error);
 
     }else{
       ROS_ERROR("ros_control - ros_control_iso: Relay switched neither up nor down\n");
@@ -298,11 +320,11 @@ namespace ros_control_iso{
     //Publish the state using the realtime safe way.
    if(controller_state_publisher_ && controller_state_publisher_->trylock()){
       controller_state_publisher_->msg_.header.stamp = time;
-      controller_state_publisher_->msg_.header.seq = current_position;
-      controller_state_publisher_->msg_.set_point = 0; // 
+      controller_state_publisher_->msg_.header.seq = sequence;
+      controller_state_publisher_->msg_.set_point = position_reference; // 
       controller_state_publisher_->msg_.error = position_error;
-      controller_state_publisher_->msg_.process_value = minPosition_encountered;
-      controller_state_publisher_->msg_.process_value_dot = maxPosition_encountered;            
+      controller_state_publisher_->msg_.process_value = current_position;
+      controller_state_publisher_->msg_.process_value_dot = minMaxError;            
       controller_state_publisher_->msg_.command = joint_.getCommand();
       controller_state_publisher_->unlockAndPublish();  
       sequence++;  
@@ -343,11 +365,9 @@ namespace ros_control_iso{
   //  double C = relay_amplitude_out;
 
     double sq1 = (xa_star + X0) / Xm;
-    ROS_INFO("sq1: %f\n", sq1);
     sq1 = sqrt(1 - sq1 * sq1);
 
     double sq2 = (xa_star-X0) / Xm;
-    ROS_INFO("sq2: %f\n", sq2);
     sq2 = sqrt(1 - sq2 * sq2);
 
     /// ros_control_iso Parameter calculation
@@ -359,8 +379,8 @@ namespace ros_control_iso{
 
     // std::cout<<"Xa_star"<<xa_star<<", X0"<<X0<<std::endl;
     // std::cout<<"Alpha = "<<params[ALPHA]<<", Kx = "<<params[KX]<<", Kxx = "<<params[KXX]<<", Delta:"<<params[DELTA]<<", w:"<<omega<<std::endl;
-    ROS_INFO("ros_control - ros_control_iso: rawish stuff: relay_amplitude_out: %f, sq1: %f, sq2: %f, omega: %f, Xm: %f, M_PI: %F \n", relay_amplitude_out, sq1, sq2, omega, Xm, M_PI );
-    ROS_INFO("ros_control - ros_control_iso: intmed. params: alpha: %f, k_x: %f, k_xx: %f, delta: %f, omega_n: %f. \n", params[ALPHA], params[KX], params[KXX], params[DELTA], params[OMEGA_N]);
+    // ROS_INFO("ros_control - ros_control_iso: rawish stuff: relay_amplitude_out: %f, sq1: %f, sq2: %f, omega: %f, Xm: %f, M_PI: %F \n", relay_amplitude_out, sq1, sq2, omega, Xm, M_PI );
+    // ROS_INFO("ros_control - ros_control_iso: intmed. params: alpha: %f, k_x: %f, k_xx: %f, delta: %f, omega_n: %f. \n", params[ALPHA], params[KX], params[KXX], params[DELTA], params[OMEGA_N]);
 
     /// Test eMAX / eMIN standard deviation of this axis identification
     finished = ( (std::fabs(stdEMax / meanEMax) < eMaxError)  &&  (std::fabs(stdEMin / meanEMin) < eMinError) );
