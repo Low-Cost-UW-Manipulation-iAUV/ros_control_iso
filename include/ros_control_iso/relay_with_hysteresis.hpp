@@ -46,6 +46,7 @@
 #define NUMPARAMS 5
 
 #define STRICT 2
+#define BEST_EFFORT 1
 
 
 namespace ros_control_iso{
@@ -63,7 +64,7 @@ namespace ros_control_iso{
 		void do_Identification_Parameter_Calculation(void);
 		int store_I_SO_Solution(void);
 
-
+		unsigned int sequence;
 		double current_position;
 
 		double position_error;

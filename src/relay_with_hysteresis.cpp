@@ -30,13 +30,11 @@ namespace ros_control_iso{
   * \author Raphael Nagel
   * \date 18/Aug/2014
   **************************************** */
-  bool relay_with_hysteresis::init(hardware_interface::EffortJointInterface* hw, ros::NodeHandle &n)
-  {
-
-    current_position= 0;
+  bool relay_with_hysteresis::init(hardware_interface::EffortJointInterface* hw, ros::NodeHandle &n) {
+    current_position= 1;
     position_error = 0;
-
-    //reset the maximum position encountered
+    sequence = 0;
+    // reset the maximum position encountered
     maxPosition_encountered = -std::numeric_limits<double>::max();
     minPosition_encountered  = std::numeric_limits<double>::max();
 
@@ -52,47 +50,47 @@ namespace ros_control_iso{
 
 
     // get joint name from the parameter server
-    if (!n.getParam("/ros_control_iso/joint", my_joint)){
+    if (!n.getParam("/ros_control_iso/joint", my_joint)) {
       ROS_ERROR("ros_control - ros_control_iso: Could not find joint name\n");
       return EXIT_FAILURE;
     }
 
     // get the joint object to use in the realtime loop
-    try{
+    try {
     joint_ = hw->getHandle(my_joint);  // throws on failure
 
     }
-    catch (...) {
+    catch(...) {
       ROS_ERROR("ros_control - ros_control_iso: Exception happened - Could not get handle of the joint");
     }
 
-    //Determining wether linear or angular procedures should be used
-    if((my_joint == "x") || (my_joint == "y") || (my_joint == "z")) {
+    // Determining wether linear or angular procedures should be used
+    if ( (my_joint == "x") || (my_joint == "y") || (my_joint == "z") ) {
       linear_or_angular = LINEAR;
 
-    }else if( (my_joint == "yaw") || (my_joint == "pitch") || (my_joint == "roll") ) {
+    } else if ( (my_joint == "yaw") || (my_joint == "pitch") || (my_joint == "roll") ) {
       linear_or_angular = ANGULAR;
    
-    }else{
+    } else {
       ROS_ERROR("ros_control - ros_control_iso: No valid joint referenced, ending\n");
       return EXIT_FAILURE;
     }
 
 
-    if (!n.getParam("/ros_control_iso/parameters/update_rate", update_rate)){
+    if (!n.getParam("/ros_control_iso/parameters/update_rate", update_rate)) {
       ROS_ERROR("ros_control - ros_control_iso: Could not find update_rate\n");
       return EXIT_FAILURE;
     }
 
-  ///How many cycles (full waveforms) do we keep track of for the purpose of the identification:
-    if (!n.getParam("/ros_control_iso/parameters/identification_length", identLen)){
+  /// How many cycles (full waveforms) do we keep track of for the purpose of the identification:
+    if (!n.getParam("/ros_control_iso/parameters/identification_length", identLen)) {
       ROS_ERROR("ros_control - ros_control_iso: Could not find identification length, assuming 10. \n");
       identLen = 10;
-      n.setParam("/ros_control_iso/parameters/identification_length", identLen);  
+      n.setParam("/ros_control_iso/parameters/identification_length", identLen);
     }
 
 
-    //now that we know the identification length resize all the vectors...    
+    // now that we know the identification length resize all the vectors...
 
       e_max.resize(identLen);
       e_min.resize(identLen);
@@ -104,11 +102,11 @@ namespace ros_control_iso{
       // 5 for number of parameters: alpha, kx, kxx, delta, omega_n
       params.resize(5);
 
-    if (!n.getParam("/ros_control_iso/parameters/relay_upper_limit", relay_upper_limit)){
+    if (!n.getParam("/ros_control_iso/parameters/relay_upper_limit", relay_upper_limit)) {
       ROS_ERROR("ros_control - ros_control_iso: Could not find upper relay switching threshold\n");
       return EXIT_FAILURE;
     }
-    if (!n.getParam("/ros_control_iso/parameters/relay_lower_limit", relay_lower_limit)){
+    if (!n.getParam("/ros_control_iso/parameters/relay_lower_limit", relay_lower_limit)) {
       ROS_ERROR("ros_control - ros_control_iso: Could not find lower relay switching threshold\n");
       return EXIT_FAILURE;
     }
@@ -161,7 +159,7 @@ namespace ros_control_iso{
       command_out = (-1) * relay_amplitude_out;
       joint_.setCommand(command_out);
 
-      do_Identification_Switched(RISING_EDGE, time);
+      do_Identification_Switched(FALLING_EDGE, time);
 
       do_Identification_Parameter_Calculation();
     }else
@@ -171,33 +169,24 @@ namespace ros_control_iso{
    
       command_out = relay_amplitude_out;
       joint_.setCommand(command_out);
-      do_Identification_Switched(FALLING_EDGE, time);
+      do_Identification_Switched(RISING_EDGE , time);
       do_Identification_Parameter_Calculation();
    
-    }else
-    if(current_position <= relay_upper_limit && current_position >= relay_lower_limit){   
-      //if we are within the relay limits
-    }else{
-      ROS_INFO("ros_control - ros_control_iso: Outside threshold, demand force is: %f.\n", joint_.getCommand());
     }
+    
 
     if(finished == TRUE){
       ROS_INFO("ros_control - ros_control_iso: Identified the following paramters for axis %s: alpha: %f, k_x: %f, k_xx: %f, delta: %f, omega_n: %f. \n", my_joint.c_str(), params[ALPHA], params[KX], params[KXX], params[DELTA], params[OMEGA_N]);
 
       //Unload the relay
       controller_manager_msgs::SwitchController switcher;
-      switcher.request.stop_controllers.push_back("ros_control_iso");
-      switcher.request.strictness = STRICT; //STRICT==2
+      switcher.request.start_controllers.push_back();      
+      switcher.request.stop_controllers.push_back("ros_control_iso/relay_with_hysteresis");
+      switcher.request.strictness = BEST_EFFORT; //STRICT==2
       ros::service::call("/controller_manager/switch_controller", switcher);    
     }
+  
 
- /*  if(controller_state_publisher_ && controller_state_publisher_->trylock()){
-      controller_state_publisher_->msg_.header.stamp = time;
-      controller_state_publisher_->msg_.process_value = current_position;
-      controller_state_publisher_->msg_.command = command_out;
-      controller_state_publisher_->unlockAndPublish();
-    }     
-*/
 
   }
 
@@ -211,8 +200,9 @@ namespace ros_control_iso{
     ROS_INFO("ros_control - ros_control_iso: starting the controller. \n");
 
     position_reference = 0;
-    current_position= 0;
+    current_position= 2;
     position_error = 0;
+    sequence = 0;
 
     //reset the maximum position encountered
     maxPosition_encountered = -std::numeric_limits<double>::max();
@@ -225,7 +215,6 @@ namespace ros_control_iso{
 
     finished = FALSE;
     minMaxError = std::numeric_limits<double>::max();
-
     ///Start the procedure off
     joint_.setCommand(relay_amplitude_out);
 
@@ -283,13 +272,13 @@ namespace ros_control_iso{
   * \author Raphael Nagel
   * \date 18/Aug/2014
   **************************************** */
-  int relay_with_hysteresis::do_Identification_Switched(int rising_falling, const ros::Time& time){
-    if(rising_falling == RISING_EDGE){
-      xa_high[counterHigh] = position_error; //the position value when the switch acctually happened (this might differ from when we wanted it to happen due to delay in the system)
+  int relay_with_hysteresis::do_Identification_Switched(int rising_falling, const ros::Time& time) {
+    if ( rising_falling == RISING_EDGE ) {
+      xa_high[counterHigh] = position_error;  // the position value when the switch acctually happened (this might differ from when we wanted it to happen due to delay in the system)
       e_min[counterLow] = minPosition_encountered;   //The minimum position value ever encountered during this half waveform
       t_min[counterLow] = tSum;     //the time taken for this half waveform
       tSum = 0;
-
+      ROS_INFO("xa_high: %f \n", position_error);
       counterLow=(counterLow+1)%identLen;
 
     }else if (rising_falling == FALLING_EDGE){
@@ -298,23 +287,30 @@ namespace ros_control_iso{
       t_max[counterHigh] = tSum;
       tSum = 0;
       counterHigh=(counterHigh+1)%identLen;      
+      ROS_INFO("xa_low: %f \n", position_error);
 
     }else{
       ROS_ERROR("ros_control - ros_control_iso: Relay switched neither up nor down\n");
       return EXIT_FAILURE;
     }
-    //reset the maximum position encountered
-    maxPosition_encountered = -std::numeric_limits<double>::max();
-    minPosition_encountered  = std::numeric_limits<double>::max(); 
+
 
     //Publish the state using the realtime safe way.
    if(controller_state_publisher_ && controller_state_publisher_->trylock()){
       controller_state_publisher_->msg_.header.stamp = time;
-      controller_state_publisher_->msg_.set_point = joint_.getCommand();
-      controller_state_publisher_->msg_.process_value = position_error;
-      controller_state_publisher_->msg_.command = relay_amplitude_out;
-      controller_state_publisher_->unlockAndPublish();      
+      controller_state_publisher_->msg_.header.seq = current_position;
+      controller_state_publisher_->msg_.set_point = 0; // 
+      controller_state_publisher_->msg_.error = position_error;
+      controller_state_publisher_->msg_.process_value = minPosition_encountered;
+      controller_state_publisher_->msg_.process_value_dot = maxPosition_encountered;            
+      controller_state_publisher_->msg_.command = joint_.getCommand();
+      controller_state_publisher_->unlockAndPublish();  
+      sequence++;  
     }   
+
+    //reset the maximum position encountered
+    maxPosition_encountered = -std::numeric_limits<double>::max();
+    minPosition_encountered  = std::numeric_limits<double>::max(); 
 
     return EXIT_SUCCESS;
   }
@@ -324,48 +320,51 @@ namespace ros_control_iso{
   * \author Raphael Nagel
   * \date 18/Aug/2014
   **************************************** */
-  void relay_with_hysteresis::do_Identification_Parameter_Calculation(void){
+  void relay_with_hysteresis::do_Identification_Parameter_Calculation(void) {
 
-    double meanEMax = labust::math::mean(e_max);
-    double stdEMax = labust::math::std2(e_max, meanEMax);
+    double meanEMax = labust::math::mean(e_max);  // Mean of the maximum position encountered
+    double stdEMax = labust::math::std2(e_max, meanEMax);  // calculate the standard deviation for that measurement
 
-    double meanEMin = labust::math::mean(e_min);
-    double stdEMin = labust::math::std2(e_min, meanEMin);
+    double meanEMin = labust::math::mean(e_min);  // Mean of the minimuim (negative) encountered
+    double stdEMin = labust::math::std2(e_min, meanEMin);  // calculate the standard deviation for that measurement
 
-    double meanTMax = labust::math::mean(t_max);
-    double meanTMin = labust::math::mean(t_min);
+    double meanTMax = labust::math::mean(t_max);  // Mean of the time taken for each positive halfcycle
+    double meanTMin = labust::math::mean(t_min);  // Mean of the time taken for each negative halfcycle
 
-    double meanXaLow = labust::math::mean(xa_low);
+    double meanXaLow = labust::math::mean(xa_low);  // acctual position when the switch happened during negative halfcycle
     double meanXaHigh = labust::math::mean(xa_high);
 
-    double T = (meanTMax + meanTMin);
-    double Xm = (0.5 * (meanEMax - meanEMin) );
-    double X0 = (0.5 * (meanEMax + meanEMin) );
-    double xa_star = (0.5 * (meanXaHigh - meanXaLow) );
+    double T = (meanTMax + meanTMin);     // Average time a complete cycle takes
+    double Xm = (0.5 * (meanEMax - meanEMin) );  // maximum Amplitude of the waveform
+    double X0 = (0.5 * (meanEMax + meanEMin) );  // Find the zero point of the waveform, which is also its offset from 0.
+    double xa_star = (0.5 * (meanXaHigh - meanXaLow) );  // Find the mean amplitude of the waveform at switching time. This is basically a standard mean calculation. It uses minus because the Xa_low is negative itself--> mean([Xa_high, abs(Xa_low)])
 
-    double omega = 2 * M_PI / T;
+    double omega = 2 * M_PI / T;  //
   //  double C = relay_amplitude_out;
 
-    double sq1 = ( xa_star + X0) / Xm;
-    sq1 = sqrt( 1 - sq1 * sq1);
+    double sq1 = (xa_star + X0) / Xm;
+    ROS_INFO("sq1: %f\n", sq1);
+    sq1 = sqrt(1 - sq1 * sq1);
 
     double sq2 = (xa_star-X0) / Xm;
-    sq2 = sqrt( 1 - sq2 * sq2);
+    ROS_INFO("sq2: %f\n", sq2);
+    sq2 = sqrt(1 - sq2 * sq2);
 
     /// ros_control_iso Parameter calculation
-    params[ALPHA] = 2 * relay_amplitude_out * (sq1 + sq2) / (M_PI * omega * omega * Xm);
-    params[KX]=( 4.0 * relay_amplitude_out * xa_star ) / ( omega * M_PI * Xm * Xm) ;
-    params[KXX]=( 3.0 * relay_amplitude_out * xa_star) / ( 2 * omega * omega * Xm * Xm * Xm );
-    params[DELTA] = relay_amplitude_out * ( meanTMax - meanTMin) / (meanTMax + meanTMin);
+    params[ALPHA] = (2 * relay_amplitude_out * (sq1 + sq2) ) / (M_PI * omega * omega * Xm);
+    params[KX]= (4.0 * relay_amplitude_out * xa_star) / (omega * M_PI * Xm * Xm);
+    params[KXX]= (3.0 * relay_amplitude_out * xa_star) / (2 * omega * omega * Xm * Xm * Xm);
+    params[DELTA] = relay_amplitude_out * (meanTMax - meanTMin) / (meanTMax + meanTMin);
     params[OMEGA_N] = omega;
 
-    //std::cout<<"Xa_star"<<xa_star<<", X0"<<X0<<std::endl;
-    //std::cout<<"Alpha = "<<params[alpha]<<", Kx = "<<params[kx]<<", Kxx = "<<params[kxx]<<", Delta:"<<params[delta]<<", w:"<<omega<<std::endl;
+    // std::cout<<"Xa_star"<<xa_star<<", X0"<<X0<<std::endl;
+    // std::cout<<"Alpha = "<<params[ALPHA]<<", Kx = "<<params[KX]<<", Kxx = "<<params[KXX]<<", Delta:"<<params[DELTA]<<", w:"<<omega<<std::endl;
+    ROS_INFO("ros_control - ros_control_iso: rawish stuff: relay_amplitude_out: %f, sq1: %f, sq2: %f, omega: %f, Xm: %f, M_PI: %F \n", relay_amplitude_out, sq1, sq2, omega, Xm, M_PI );
+    ROS_INFO("ros_control - ros_control_iso: intmed. params: alpha: %f, k_x: %f, k_xx: %f, delta: %f, omega_n: %f. \n", params[ALPHA], params[KX], params[KXX], params[DELTA], params[OMEGA_N]);
 
     /// Test eMAX / eMIN standard deviation of this axis identification
-    finished = ( (std::fabs(stdEMax / meanEMax) < eMaxError )  &&  (std::fabs(stdEMin / meanEMin) < eMinError) );
-    minMaxError = ( std::fabs(stdEMax / meanEMax) + std::fabs(stdEMin / meanEMin) ) / 2;
-
+    finished = ( (std::fabs(stdEMax / meanEMax) < eMaxError)  &&  (std::fabs(stdEMin / meanEMin) < eMinError) );
+    minMaxError = ( std::fabs(stdEMax / meanEMax) + std::fabs(stdEMin / meanEMin)) / 2;
   }
 
   /** store_I_SO_Solution() writes the system characteristic parameters found through the ros_control_iso to the parameter server
@@ -374,46 +373,46 @@ namespace ros_control_iso{
   * \author Raphael Nagel
   * \date 26/Aug/2014
   **************************************** */
-  int relay_with_hysteresis::store_I_SO_Solution(void){
+  int relay_with_hysteresis::store_I_SO_Solution(void) {
     double test = 0;
 
     ros::param::set("/ros_control_iso/solution/alpha", params[ALPHA]);
-    if(ros::param::get("/ros_control_iso/solution/alpha", test) ){
-      if(test !=params[ALPHA]){
+    if ( ros::param::get("/ros_control_iso/solution/alpha", test) ) {
+      if (test !=params[ALPHA]) {
         ROS_ERROR("ros_control - ros_control_iso: Could not store ros_control_iso alpha solution on parameter server");
         return EXIT_FAILURE;
       }
     }
     ros::param::set("/ros_control_iso/solution/k_x", params[KX]);
-    if(ros::param::get("/ros_control_iso/solution/k_x", test) ){
-      if(test !=params[KX]){
+    if ( ros::param::get("/ros_control_iso/solution/k_x", test) ) {
+      if (test !=params[KX]) {
         ROS_ERROR("ros_control - ros_control_iso: Could not store ros_control_iso k_x solution on parameter server");
-        return EXIT_FAILURE;      
+        return EXIT_FAILURE;
       }
-    }  
+    }
     ros::param::set("/ros_control_iso/solution/k_xx", params[KXX]);
-    if(ros::param::get("/ros_control_iso/solution/k_xx", test) ){
-      if(test !=params[KXX]){
+    if ( ros::param::get("/ros_control_iso/solution/k_xx", test) ) {
+      if (test !=params[KXX]) {
         ROS_ERROR("ros_control - ros_control_iso: Could not store ros_control_iso k_xx solution on parameter server");
-        return EXIT_FAILURE;      
+        return EXIT_FAILURE;
       }
     }
     ros::param::set("/ros_control_iso/solution/delta", params[DELTA]);
-    if(ros::param::get("/ros_control_iso/solution/delta", test) ){
-      if(test !=params[DELTA]){
+    if ( ros::param::get("/ros_control_iso/solution/delta", test) ) {
+      if (test !=params[DELTA]) {
         ROS_ERROR("ros_control - ros_control_iso: Could not store ros_control_iso delta solution on parameter server");
-        return EXIT_FAILURE;      
+        return EXIT_FAILURE;
       }
     }
     ros::param::set("/ros_control_iso/solution/omega_n", params[OMEGA_N]);
-    if(ros::param::get("/ros_control_iso/solution/omega_n", test) ){
-      if(test !=params[OMEGA_N]){
+    if ( ros::param::get("/ros_control_iso/solution/omega_n", test) ) {
+      if (test !=params[OMEGA_N]) {
         ROS_ERROR("ros_control - ros_control_iso: Could not store ros_control_iso omega_n solution on parameter server");
-        return EXIT_FAILURE;      
+        return EXIT_FAILURE;
       }
     }
     return EXIT_SUCCESS;
   }
 }
 
-PLUGINLIB_EXPORT_CLASS( ros_control_iso::relay_with_hysteresis, controller_interface::ControllerBase)
+PLUGINLIB_EXPORT_CLASS(ros_control_iso::relay_with_hysteresis, controller_interface::ControllerBase)
