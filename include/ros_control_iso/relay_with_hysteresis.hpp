@@ -51,8 +51,7 @@
 
 namespace ros_control_iso{
 
-	class relay_with_hysteresis : public controller_interface::Controller<hardware_interface::EffortJointInterface>
-	{
+	class relay_with_hysteresis : public controller_interface::Controller<hardware_interface::EffortJointInterface> {
 	public:
 	 	bool init(hardware_interface::EffortJointInterface* , ros::NodeHandle& );
 		void update(const ros::Time& , const ros::Duration& period);
@@ -63,7 +62,7 @@ namespace ros_control_iso{
 		int do_Identification_Switched(int,  const ros::Time&);
 		void do_Identification_Parameter_Calculation(void);
 		int store_I_SO_Solution(void);
-
+		int real_time_publish(const ros::Time&);
 		unsigned int sequence;
 		double current_position;
 
@@ -92,8 +91,7 @@ namespace ros_control_iso{
 
 		std::string my_joint;
 
-		ros::ServiceClient stop_controller_client;
-
+		ros::ServiceClient next_client;
 		
 		std::vector<double> e_max, e_min, t_max, t_min, xa_high, xa_low;
 		std::vector<double> params;

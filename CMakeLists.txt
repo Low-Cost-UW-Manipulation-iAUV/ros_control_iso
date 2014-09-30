@@ -3,40 +3,62 @@ project(ros_control_iso)
 
 # Load catkin and all dependencies required for this package
 find_package(catkin REQUIRED COMPONENTS
-controller_interface
-hardware_interface
-pluginlib
-control_msgs
-#forward_command_controller
-control_toolbox
-realtime_tools
-urdf
-snippets
-
+	controller_interface
+	hardware_interface
+	pluginlib
+	control_msgs
+	#forward_command_controller
+	control_toolbox
+	realtime_tools
+	urdf
+	snippets
+	message_generation
+	roscpp
+	std_srvs
+	std_msgs
 )
+
 
 include_directories(include ${Boost_INCLUDE_DIR} ${catkin_INCLUDE_DIRS})
+
+add_service_files(
+	DIRECTORY srv 
+	FILES nextDOF.srv)
+
+
+generate_messages(
+	DEPENDENCIES
+	std_msgs
+	std_srvs	
+	)
+
+
 # Declare catkin package
 catkin_package(
-CATKIN_DEPENDS
-controller_interface
-control_msgs
-control_toolbox
-realtime_tools
-urdf
-forward_command_controller
-pluginlib
-INCLUDE_DIRS include
-LIBRARIES ${PROJECT_NAME}
+	CATKIN_DEPENDS
+		message_runtime
+		controller_interface
+		control_msgs
+		control_toolbox
+		realtime_tools
+		urdf
+		roscpp
+		forward_command_controller
+		pluginlib
+	INCLUDE_DIRS include
+	LIBRARIES ${PROJECT_NAME}
 )
 
-add_library(${PROJECT_NAME}
+add_library(${PROJECT_NAME} src/relay_with_hysteresis.cpp )
 
-src/relay_with_hysteresis.cpp
-
-)
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
-# Install
+
+add_executable(identification_server src/identification_server.cpp)
+target_link_libraries(identification_server ${catkin_LIBRARIES})
+add_dependencies(identification_server ros_control_iso_generate_messages_cpp std_srvs_generate_messages_cpp)
+
+
+# Install the pluginlib part of this node
 install(DIRECTORY include/${PROJECT_NAME}/
 DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
 install(TARGETS ${PROJECT_NAME}

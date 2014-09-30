@@ -20,7 +20,11 @@
 #include <pluginlib/class_list_macros.h>
 
 #include <labust/math/NumberManipulation.hpp>
-#include <ros_control_iso/relay_with_hysteresis.hpp>
+#include "ros_control_iso/relay_with_hysteresis.hpp"
+
+#include "ros_control_iso/nextDOF.h"
+
+#include <sstream>
 
 namespace ros_control_iso{
 
@@ -31,7 +35,9 @@ namespace ros_control_iso{
   * \date 18/Aug/2014
   **************************************** */
   bool relay_with_hysteresis::init(hardware_interface::EffortJointInterface* hw, ros::NodeHandle &n) {
-    current_position= 1;
+    std::ostringstream param_address;
+
+    current_position= 0;
     position_error = 0;
     sequence = 0;
     // reset the maximum position encountered
@@ -76,17 +82,24 @@ namespace ros_control_iso{
       return EXIT_FAILURE;
     }
 
-
-    if (!n.getParam("/ros_control_iso/parameters/update_rate", update_rate)) {
+    /// Get the parameters to run the relay.
+    param_address.clear();
+    param_address.str(""); 
+    param_address << "/ros_control_iso/"<< my_joint << "/parameters/update_rate";
+    if (!n.getParam(param_address.str(), update_rate)) {
       ROS_ERROR("ros_control - ros_control_iso: Could not find update_rate\n");
       return EXIT_FAILURE;
     }
+    param_address.clear();
+    param_address.str(""); 
+
+    param_address << "/ros_control_iso/"<< my_joint << "/parameters/identification_length";
 
   /// How many cycles (full waveforms) do we keep track of for the purpose of the identification:
-    if (!n.getParam("/ros_control_iso/parameters/identification_length", identLen)) {
+    if (!n.getParam(param_address.str(), identLen)) {
       ROS_ERROR("ros_control - ros_control_iso: Could not find identification length, assuming 10. \n");
       identLen = 10;
-      n.setParam("/ros_control_iso/parameters/identification_length", identLen);
+      n.setParam(param_address.str(), identLen);
     }
 
 
@@ -101,39 +114,63 @@ namespace ros_control_iso{
       
       // 5 for number of parameters: alpha, kx, kxx, delta, omega_n
       params.resize(5);
+    
+    param_address.clear(); 
+    param_address.str(""); 
 
-    if (!n.getParam("/ros_control_iso/parameters/relay_upper_limit", relay_upper_limit)) {
+    param_address << "/ros_control_iso/"<< my_joint << "/parameters/relay_upper_limit";
+    if (!n.getParam(param_address.str(), relay_upper_limit)) {
       ROS_ERROR("ros_control - ros_control_iso: Could not find upper relay switching threshold\n");
       return EXIT_FAILURE;
     }
-    if (!n.getParam("/ros_control_iso/parameters/relay_lower_limit", relay_lower_limit)) {
+    param_address.clear();  
+    param_address.str(""); 
+
+    param_address << "/ros_control_iso/"<< my_joint << "/parameters/relay_lower_limit";
+    if (!n.getParam(param_address.str(), relay_lower_limit)) {
       ROS_ERROR("ros_control - ros_control_iso: Could not find lower relay switching threshold\n");
       return EXIT_FAILURE;
-    }
-    if (!n.getParam("/ros_control_iso/parameters/relay_amplitude_out_inNewtons", relay_amplitude_out)){
+    }    
+    param_address.clear();
+    param_address.str(""); 
+
+    param_address << "/ros_control_iso/"<< my_joint << "/parameters/relay_amplitude_out_inNewtons";
+    if (!n.getParam(param_address.str(), relay_amplitude_out)){
       ROS_ERROR("ros_control - ros_control_iso: Could not find relay amplitude out value\n");
       return EXIT_FAILURE;
-    }            
-    if (!n.getParam("/ros_control_iso/parameters/position_reference", position_reference)){
+    }  
+    param_address.clear();
+    param_address.str(""); 
+
+    param_address << "/ros_control_iso/"<< my_joint << "/parameters/position_reference";
+    if (!n.getParam(param_address.str(), position_reference)){
       ROS_ERROR("ros_control - ros_control_iso: Could not find position_reference, assuming 0\n");
       position_reference = 0;
     } 
-    if (!n.getParam("/ros_control_iso/parameters/e_max_error", eMaxError)){
+    param_address.clear();
+    param_address.str(""); 
+
+    param_address << "/ros_control_iso/"<< my_joint << "/parameters/e_max_error";  
+    if (!n.getParam(param_address.str(), eMaxError)){
       ROS_ERROR("ros_control - ros_control_iso: Could not find e_max_error, assuming 0.1\n");
       eMaxError = 0.1;
-      n.setParam("/ros_control_iso/parameters/e_max_error", eMaxError);
+      n.setParam(param_address.str(), eMaxError);
     } 
-    if (!n.getParam("/ros_control_iso/parameters/e_min_error", eMinError)){
+    param_address.clear();
+    param_address.str(""); 
+
+    param_address << "/ros_control_iso/"<< my_joint << "/parameters/e_min_error";      
+    if (!n.getParam(param_address.str(), eMinError)){
       ROS_ERROR("ros_control - ros_control_iso: Could not find e_min_error, assuming 0.1\n");
       eMinError = 0.1;
-      n.setParam("/ros_control_iso/parameters/e_min_error", eMinError);
+      n.setParam(param_address.str(), eMinError);
     }     
     ROS_INFO("ros_control - ros_control_iso: Loaded all parameters, starting the realtime publisher.\n");
      // Start realtime state publisher
     controller_state_publisher_.reset(new realtime_tools::RealtimePublisher<control_msgs::JointControllerState>(n, "state", 1) );
     ROS_INFO("ros_control - ros_control_iso: RealtimePublisher started\n");
 
-    stop_controller_client = n.serviceClient<controller_manager_msgs::SwitchController>("/controller_manager/switch_controller");
+    next_client = n.serviceClient<ros_control_iso::nextDOF>("/ros_control_iso/nextDOF");
 
     //return EXIT_SUCCESS;
     return 1;
@@ -181,33 +218,31 @@ namespace ros_control_iso{
     
 
     if(finished == TRUE){
-      ROS_INFO("ros_control - ros_control_iso: Identified the following paramters for axis %s: alpha: %f, k_x: %f, k_xx: %f, delta: %f, omega_n: %f. \n", my_joint.c_str(), params[ALPHA], params[KX], params[KXX], params[DELTA], params[OMEGA_N]);
-
       /// set the thruster output to       
-      joint_.setCommand(0);
-
-      /// store the ISO solution in the parameter server
-      store_I_SO_Solution();
+      ROS_INFO("ros_control - ros_control_iso: Identified the following parameters for axis %s: alpha: %f, k_x: %f, k_xx: %f, delta: %f, omega_n: %f. \n", my_joint.c_str(), params[ALPHA], params[KX], params[KXX], params[DELTA], params[OMEGA_N]);
       ROS_INFO("ros_control - ros_control_iso: Finished, please stop the controller.");
-     /* // Unload the relay
-      controller_manager_msgs::SwitchController switcher;
-      switcher.request.stop_controllers.push_back("/ros_control_iso/relay_with_hysteresis");
-      switcher.request.strictness = BEST_EFFORT; //STRICT==2
-      stop_controller_client.call(switcher);
-      */
+      // run the stuff below only once.
+      static bool notified_server = FALSE;
+      if(notified_server == FALSE){
+        joint_.setCommand(0);
+        /// store the ISO solution in the parameter server
+        store_I_SO_Solution();
 
-      //Publish the state using the realtime safe way.
-     if(controller_state_publisher_ && controller_state_publisher_->trylock()){
-        controller_state_publisher_->msg_.header.stamp = time;
-        controller_state_publisher_->msg_.header.seq = sequence;
-        controller_state_publisher_->msg_.set_point = position_reference; // 
-        controller_state_publisher_->msg_.error = position_error;
-        controller_state_publisher_->msg_.process_value = current_position;
-        controller_state_publisher_->msg_.process_value_dot = minMaxError;
-        controller_state_publisher_->msg_.command = joint_.getCommand();
-        controller_state_publisher_->unlockAndPublish();  
-        sequence++;  
-      }         
+        //Publish the state using the realtime safe way.
+        real_time_publish(time);
+      
+        /// Tell the identification server that we want the next DOF to identify
+        ros_control_iso::nextDOF do_next;
+        do_next.request.now = my_joint;
+        if(next_client.call(do_next)){
+          ROS_INFO("ros_control_iso - relay_with_hysteresis: identification server called");
+        } else{
+          ROS_ERROR("ros_control_iso - relay_with_hysteresis: could not call identification server");
+        }
+        notified_server = TRUE;
+      }
+
+
     }
   
 
@@ -224,7 +259,7 @@ namespace ros_control_iso{
     ROS_INFO("ros_control - ros_control_iso: starting the controller. \n");
 
     position_reference = 0;
-    current_position= 2;
+    current_position= 0;
     position_error = 0;
     sequence = 0;
 
@@ -316,6 +351,16 @@ namespace ros_control_iso{
       return EXIT_FAILURE;
     }
 
+    real_time_publish(time);
+
+    //reset the maximum position encountered
+    maxPosition_encountered = -std::numeric_limits<double>::max();
+    minPosition_encountered  = std::numeric_limits<double>::max(); 
+
+    return EXIT_SUCCESS;
+  }
+
+  int relay_with_hysteresis::real_time_publish(const ros::Time& time){
 
     //Publish the state using the realtime safe way.
    if(controller_state_publisher_ && controller_state_publisher_->trylock()){
@@ -328,13 +373,9 @@ namespace ros_control_iso{
       controller_state_publisher_->msg_.command = joint_.getCommand();
       controller_state_publisher_->unlockAndPublish();  
       sequence++;  
-    }   
-
-    //reset the maximum position encountered
-    maxPosition_encountered = -std::numeric_limits<double>::max();
-    minPosition_encountered  = std::numeric_limits<double>::max(); 
-
-    return EXIT_SUCCESS;
+      return EXIT_SUCCESS;
+    }
+    return EXIT_FAILURE;   
   }
   /** do_Identification_Parameter_Calculation() calculates the Systems characteristic parameters
   *
@@ -395,37 +436,58 @@ namespace ros_control_iso{
   **************************************** */
   int relay_with_hysteresis::store_I_SO_Solution(void) {
     double test = 0;
+    std::ostringstream param_address;
 
-    ros::param::set("/ros_control_iso/solution/alpha", params[ALPHA]);
-    if ( ros::param::get("/ros_control_iso/solution/alpha", test) ) {
+    param_address.clear();
+    param_address.str(""); 
+
+    param_address << "/ros_control_iso/" << my_joint << "/solution/alpha";
+    ros::param::set(param_address.str(), params[ALPHA]);
+    if ( ros::param::get(param_address.str(), test) ) {
       if (test !=params[ALPHA]) {
         ROS_ERROR("ros_control - ros_control_iso: Could not store ros_control_iso alpha solution on parameter server");
         return EXIT_FAILURE;
       }
     }
-    ros::param::set("/ros_control_iso/solution/k_x", params[KX]);
-    if ( ros::param::get("/ros_control_iso/solution/k_x", test) ) {
+    param_address.clear();
+    param_address.str(""); 
+
+    param_address << "/ros_control_iso/" << my_joint << "/solution/k_x";
+    ros::param::set(param_address.str(), params[KX]);
+    if ( ros::param::get(param_address.str(), test) ) {
       if (test !=params[KX]) {
         ROS_ERROR("ros_control - ros_control_iso: Could not store ros_control_iso k_x solution on parameter server");
         return EXIT_FAILURE;
       }
     }
-    ros::param::set("/ros_control_iso/solution/k_xx", params[KXX]);
-    if ( ros::param::get("/ros_control_iso/solution/k_xx", test) ) {
+    param_address.clear();
+    param_address.str(""); 
+
+    param_address << "/ros_control_iso/" << my_joint << "/solution/k_xx";
+    ros::param::set(param_address.str(), params[KXX]);
+    if ( ros::param::get(param_address.str(), test) ) {
       if (test !=params[KXX]) {
         ROS_ERROR("ros_control - ros_control_iso: Could not store ros_control_iso k_xx solution on parameter server");
         return EXIT_FAILURE;
       }
     }
-    ros::param::set("/ros_control_iso/solution/delta", params[DELTA]);
-    if ( ros::param::get("/ros_control_iso/solution/delta", test) ) {
+    param_address.clear();
+    param_address.str(""); 
+
+    param_address << "/ros_control_iso/" << my_joint << "/solution/delta";
+    ros::param::set(param_address.str(), params[DELTA]);
+    if ( ros::param::get(param_address.str(), test) ) {
       if (test !=params[DELTA]) {
         ROS_ERROR("ros_control - ros_control_iso: Could not store ros_control_iso delta solution on parameter server");
         return EXIT_FAILURE;
       }
     }
-    ros::param::set("/ros_control_iso/solution/omega_n", params[OMEGA_N]);
-    if ( ros::param::get("/ros_control_iso/solution/omega_n", test) ) {
+    param_address.clear();
+    param_address.str(""); 
+
+    param_address << "/ros_control_iso/" << my_joint << "/solution/omega_n";
+    ros::param::set(param_address.str(), params[OMEGA_N]);
+    if ( ros::param::get(param_address.str(), test) ) {
       if (test !=params[OMEGA_N]) {
         ROS_ERROR("ros_control - ros_control_iso: Could not store ros_control_iso omega_n solution on parameter server");
         return EXIT_FAILURE;

@@ -1,27 +1,97 @@
 ros_control_iso: #The Identification by Self-Oscillation parameter server parameter initialisation yaml file
-  joint : x
-  parameters :
-    update_rate : 50
-    identification_length : 10
-    relay_upper_limit : 22.5
-    relay_lower_limit : -22.5
-    relay_amplitude_out_inNewtons : 17.09E-2
-    position_reference : 0
-    e_max_error : 0.3
-    e_min_error : 0.3
-  solution:
-    alpha : 0
-    k_xx : 0
-    k_xx : 0
-    delta : 0
-    omega_n : 0
 # Publish all joint states -----------------------------------
 #  joint_state_controller:
 #    type: joint_state_controller/JointStateController
 #    publish_rate: 50  
+#   I believe this is necessary for the plugin manager stuff...
 # Position Controllers ---------------------------------------
   relay_with_hysteresis:
     type: ros_control_iso/relay_with_hysteresis
     joint: x
     publish_rate: 60
+  joint : x # the current DOF that is being identified
+  list_to_ident: [x,y,z] # the DOFs to identify
+  num_of_DOF: 3 #number of items in the list above
+# The parameters for each axis 
+  x:
+    parameters :
+      update_rate : 50
+      identification_length : 10
+      relay_upper_limit : 22.5
+      relay_lower_limit : -22.5
+      relay_amplitude_out_inNewtons : 17.09E-2
+      position_reference : 0
+      e_max_error : 0.3
+      e_min_error : 0.3
+    solution:
+      alpha : 0
+      k_xx : 0
+      k_xx : 0
+      delta : 0
+      omega_n : 0
+  y:
+    parameters :
+      update_rate : 50
+      identification_length : 10
+      relay_upper_limit : 22.5
+      relay_lower_limit : -22.5
+      relay_amplitude_out_inNewtons : 17.09E-2
+      position_reference : 0
+      e_max_error : 0.3
+      e_min_error : 0.3
+    solution:
+      alpha : 0
+      k_xx : 0
+      k_xx : 0
+      delta : 0
+      omega_n : 0
+  z:
+    parameters :
+      update_rate : 50
+      identification_length : 10
+      relay_upper_limit : 22.5
+      relay_lower_limit : -22.5
+      relay_amplitude_out_inNewtons : 17.09E-2
+      position_reference : 0
+      e_max_error : 0.3
+      e_min_error : 0.3
+    solution:
+      alpha : 0
+      k_xx : 0
+      k_xx : 0
+      delta : 0
+      omega_n : 0   
+  yaw:
+    parameters :
+      update_rate : 50
+      identification_length : 10
+      relay_upper_limit : 22.5
+      relay_lower_limit : -22.5
+      relay_amplitude_out_inNewtons : 17.09E-2
+      position_reference : 0
+      e_max_error : 0.3
+      e_min_error : 0.3
+    solution:
+      alpha : 0
+      k_xx : 0
+      k_xx : 0
+      delta : 0
+      omega_n : 0 
+  pitch:
+    parameters :
+      update_rate : 50
+      identification_length : 10
+      relay_upper_limit : 22.5
+      relay_lower_limit : -22.5
+      relay_amplitude_out_inNewtons : 17.09E-2
+      position_reference : 0
+      e_max_error : 0.3
+      e_min_error : 0.3
+    solution:
+      alpha : 0
+      k_xx : 0
+      k_xx : 0
+      delta : 0
+      omega_n : 0                  
+
 
