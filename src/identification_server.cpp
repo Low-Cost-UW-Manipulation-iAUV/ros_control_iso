@@ -105,7 +105,6 @@ namespace ros_control_iso{
 	}
 
 
-
 	/** start() sets the system up for the first DOF identification.
 	*		It prepares the parameter server data so that the ros_controll controller
 	*		can run again. 
@@ -221,7 +220,9 @@ int main(int argc, char **argv){
 
   	ROS_INFO("Services are running");
 	
-	ros::spin();
+	ros::AsyncSpinner spinner(4); // Use 4 threads
+	spinner.start();
+	ros::waitForShutdown();
 
 	ROS_INFO("identification_server: Shutting down ");
 
