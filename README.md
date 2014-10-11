@@ -12,7 +12,11 @@ https://github.com/labust/labust-ros-pkg/tree/master/ident_so
 
 
 All parameters required for setting up the relay with hysteresis are to be set in the I-SO.yaml file.
-This file needs to be loaded and then the identification server loaded by:
+This file needs to be loaded:
+```ros
+rosparam load ...src/ros_control_iso/I-SO.yaml
+```
+and then the identification server loaded by:
 ```ros
 rosrun ros_control_iso identification_server
 ```
@@ -25,4 +29,9 @@ rosservice call ros_control_iso/start
 It can be stopped in between by doing
 ```ros
 rosservice call ros_control_iso/stop
+```
+
+The identified parameters are stored in the parameter server under their respective axis name (see I-SO.yaml) and can be displayed i.e.:
+```ros
+rosparam get ros_control_iso/x/solution/
 ```
