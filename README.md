@@ -10,6 +10,8 @@ https://github.com/ros-controls/ros_control/wiki/controller_interface
 and
 https://github.com/labust/labust-ros-pkg/tree/master/ident_so
 
+It has been tested in simulation and works for linear as well as angular DOFs. 
+For angular DOFs please note that it expects the position in deg and will automatically wrap them to +-pi. Therefore the relay width cannot be bigger than +-pi respectively. Otherwise it will never trigger.
 
 All parameters required for setting up the relay with hysteresis are to be set in the I-SO.yaml file.
 This file needs to be loaded:
