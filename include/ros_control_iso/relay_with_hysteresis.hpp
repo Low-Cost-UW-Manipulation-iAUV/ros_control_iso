@@ -1,33 +1,37 @@
-/**********************************************************************
-*   This controller header file belongs to
-*	 relay with hysterisis. It is used to identify
-*   system parameters by following the identification by self oscillation
-*   described by Miskovic DOI: 10.1002/rob.20374
-*
-*   This controller is based on: 
-*   https://github.com/ros-controls/ros_control/wiki/controller_interface
-*   and
-*   https://github.com/labust/labust-ros-pkg/tree/master/ident_so
-*
-*   further modified by Raphael Nagel
-*   raphael.nagel (#) posteo de
-*   18/Aug/2014
-*///////////////////////////////////////////////////////////////////////
+// **********************************************************************
+//  Copyright 2014 GNU license
+//  This controller header file belongs to relay with hysterisis. It is used to identify
+//   system parameters by following the identification by self oscillation
+//   described by Miskovic DOI: 10.1002/rob.20374
+//
+//   This controller is based on:
+//   https://github.com/ros-controls/ros_control/wiki/controller_interface
+//   and
+//   https://github.com/labust/labust-ros-pkg/tree/master/ident_so
+//
+//   further modified by Raphael Nagel
+//   raphael.nagel (#) posteo de
+//   18/Aug/2014
+//
+////////////////////////////////////////////////////////////////////////
 #ifndef __RELAY_W_HYSTERESIS__
 #define __RELAY_W_HYSTERESIS__
 
 
 #include <ros/node_handle.h>
-//#include <urdf/model.h>
+#include <std_msgs/Float64.h>
+
 #include <boost/scoped_ptr.hpp>
 #include <boost/thread/condition.hpp>
+
 #include <realtime_tools/realtime_publisher.h>
+#include <realtime_tools/realtime_buffer.h>
+
 #include <hardware_interface/joint_command_interface.h>
+
 #include <controller_interface/controller.h>
 #include <control_msgs/JointControllerState.h>
-#include <std_msgs/Float64.h>
-#include <control_msgs/JointControllerState.h>
-#include <realtime_tools/realtime_buffer.h>
+
 
 #define LINEAR 0
 #define ANGULAR 1
@@ -63,9 +67,14 @@ namespace ros_control_iso{
 		void do_Identification_Parameter_Calculation(void);
 		int store_I_SO_Solution(void);
 		int real_time_publish(const ros::Time&);
+		int get_parameters(void);
+		void reset_waveform_meas(void);
+
+		// Relay Parameters:
 		unsigned int sequence;
 		double current_position;
 
+		ros::NodeHandle nh_;
 		double position_error;
 
 		double update_rate;
@@ -85,6 +94,8 @@ namespace ros_control_iso{
 		int counterLow;
 
 		bool finished;
+		bool notified_server;
+
 		double minMaxError;
 		double eMaxError;
 		double eMinError;
@@ -94,8 +105,8 @@ namespace ros_control_iso{
 		ros::ServiceClient next_client;
 		
 		std::vector<double> e_max, e_min, t_max, t_min, xa_high, xa_low;
-		std::vector<double> params;
-
+		std::vector<double> solutions;
+		hardware_interface::EffortJointInterface* hw_;
 		hardware_interface::JointHandle joint_;
  		//realtime_tools::RealtimeBuffer<Commands> command_;
  		//Commands command_struct_; // pre-allocated memory that is re-used to set the realtime buffer 		
