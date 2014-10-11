@@ -338,7 +338,7 @@ namespace ros_control_iso{
     tSum += 1/update_rate; //measure the time during this half waveform
 
 
-    //Handle angular values and angular wrapping
+    //Handle angular values and angular wrapping, maps it into +- pi range
     if (linear_or_angular == ANGULAR) {
       position_error = labust::math::wrapRad(
           labust::math::wrapRad(position_reference) - labust::math::wrapRad(current_position)
