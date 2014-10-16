@@ -50,7 +50,7 @@ namespace ros_control_iso {
 
     private:
 		void update(const ros::TimerEvent&);
-		bool restart(void);		
+		bool restart(void);
 		bool stop(void);
 		bool pause(void);
 		unsigned int system_state;

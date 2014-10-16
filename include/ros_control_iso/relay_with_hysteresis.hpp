@@ -24,6 +24,8 @@
 #include <boost/scoped_ptr.hpp>
 #include <boost/thread/condition.hpp>
 
+#include <vector>
+
 #include <realtime_tools/realtime_publisher.h>
 #include <realtime_tools/realtime_buffer.h>
 
@@ -60,7 +62,7 @@ namespace ros_control_iso{
 	 	bool init(hardware_interface::EffortJointInterface* , ros::NodeHandle& );
 		void update(const ros::Time& , const ros::Duration& period);
 		void starting(const ros::Time& );
-		void stopping(const ros::Time& ); 
+		void stopping(const ros::Time& );
 	private:
 		void do_Identification_Step(void);
 		int do_Identification_Switched(int,  const ros::Time&);
@@ -78,7 +80,7 @@ namespace ros_control_iso{
 		double position_error;
 
 		double update_rate;
-		
+
 		double relay_upper_limit;
 		double relay_lower_limit;
 		double relay_amplitude_out;
@@ -103,13 +105,13 @@ namespace ros_control_iso{
 		std::string my_joint;
 
 		ros::ServiceClient next_client;
-		
+
 		std::vector<double> e_max, e_min, t_max, t_min, xa_high, xa_low;
 		std::vector<double> solutions;
 		hardware_interface::EffortJointInterface* hw_;
 		hardware_interface::JointHandle joint_;
  		//realtime_tools::RealtimeBuffer<Commands> command_;
- 		//Commands command_struct_; // pre-allocated memory that is re-used to set the realtime buffer 		
+ 		//Commands command_struct_; // pre-allocated memory that is re-used to set the realtime buffer
 		boost::scoped_ptr <realtime_tools::RealtimePublisher <control_msgs::JointControllerState> > controller_state_publisher_ ;
 
 	};

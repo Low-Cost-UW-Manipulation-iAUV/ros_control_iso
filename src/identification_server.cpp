@@ -1,6 +1,6 @@
 /**********************************************************************
 *   Copyright 2014 GNU License
-*	This node controls the 5 DOF Identification by self-oscillation is a relay with hysterisis. 
+*	This node controls the 5 DOF Identification by self-oscillation is a relay with hysterisis.
 *	It is used to identify
 *   system parameters by following the identification by self oscillation
 *   described by Miskovic DOI: 10.1002/rob.20374
@@ -53,7 +53,7 @@ namespace ros_control_iso{
 
 	/** update() runs 1-10 times per second (see .yaml) to update the current state.
 	*		It prepares the parameter server data so that the ros_controll controller
-	*		can run againh_. 
+	*		can run againh_.
 	*
 	* \author Raphael Nagel
 	* \date 29/Sep/2014
@@ -89,7 +89,7 @@ namespace ros_control_iso{
 	/** next_DOF() sets the system up for the next DOF identificationh.
 	*		It prepares the parameter server data so that the ros_controll controller
 	*		can run again.
-	*		To prevent a lock the acctual srv call for starting and stopping is run in the update() loop. 
+	*		To prevent a lock the acctual srv call for starting and stopping is run in the update() loop.
 	*
 	* \author Raphael Nagel
 	* \date 29/Sep/2014
@@ -113,7 +113,7 @@ namespace ros_control_iso{
 
 			/// Line up the next DOF to be identified
 			nh_.setParam("/ros_control_iso/joint", list_to_ident[current_DOF]);
-			std::string pre_setParam_DOF = list_to_ident[current_DOF];			
+			std::string pre_setParam_DOF = list_to_ident[current_DOF];
 			nh_.getParam("/ros_control_iso/joint", list_to_ident[current_DOF]);
 			if ( list_to_ident[current_DOF] != pre_setParam_DOF) {
 				ROS_ERROR("ros_control_iso - identification_server: could not set next DOF to be determined.");
@@ -125,9 +125,9 @@ namespace ros_control_iso{
 				ROS_INFO("ros_control_iso - identification_server: just set the next DOF to be identified to %s", list_to_ident[current_DOF].c_str());
 				// start the ros_controller again
 				system_state = DOF_FINISHED;
-				res.OK = 1;				
+				res.OK = 1;
 				return 1; // ros_control does not like EXIT_SUCCESS
-			}			
+			}
 
 		} else { // The controller is out of sync with me.
 			ROS_ERROR("ros_control_iso - identification_server: ros_controller has just finished a different identification than the server expected");
@@ -141,20 +141,20 @@ namespace ros_control_iso{
 
 	/** start() sets the system up for the first DOF identificationh_.
 	*		It prepares the parameter server data so that the ros_controll controller
-	*		can run againh_. 
+	*		can run againh_.
 	*
 	* \author Raphael Nagel
 	* \date 29/Sep/2014
 	**************************************** */
 	bool identification_server::start(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response) {
 		num_of_DOF = 0;
-		
+
 		/// find out which DOF you want me to identify
 		if(!nh_.getParam("/ros_control_iso/num_of_DOF", num_of_DOF)) {
 			ROS_ERROR("ros_control_iso - identification_server: couldnt get number of DOFs");
 			return EXIT_FAILURE;
 		}
-		
+
 
 		/// fit the DOFs to ident into the list
 		list_to_ident.resize(num_of_DOF);
@@ -165,14 +165,14 @@ namespace ros_control_iso{
 
 
 		/// set the first parameter to be identfied.
-		nh_.setParam("/ros_control_iso/joint", list_to_ident[current_DOF]);		
+		nh_.setParam("/ros_control_iso/joint", list_to_ident[current_DOF]);
 		if (!nh_.getParam("/ros_control_iso/joint", list_to_ident[current_DOF])) {
 
 			ROS_ERROR("ros_control_iso - identification_server: could not set next DOF to be determined.");
 			return EXIT_FAILURE;
-			
+
 		} else { // successfully set it, so now start the ros_control controller
-		
+
 			controller_manager_msgs::LoadController loader;
 			loader.request.name = "/ros_control_iso/relay_with_hysteresis";
 			if(service_client_loader.call(loader)){
@@ -194,13 +194,13 @@ namespace ros_control_iso{
 				ROS_ERROR("ros_control_iso - identification_server: could not start the controller upon start.");
 
 			}
-			return 1;  // ros_control does not like EXIT_SUCCESS 
+			return 1;  // ros_control does not like EXIT_SUCCESS
 		}
 	}
 
 	//private version
 	bool identification_server::restart(void) {
-					
+
 		/// start the ros_controller
 		controller_manager_msgs::SwitchController switcher;
 		switcher.request.start_controllers.push_back("/ros_control_iso/relay_with_hysteresis");
@@ -213,7 +213,7 @@ namespace ros_control_iso{
 			ROS_ERROR("ros_control_iso - identification_server: could not start the controller upon start.");
 
 		}
-		return 1;  // ros_control does not like EXIT_SUCCESS 
+		return 1;  // ros_control does not like EXIT_SUCCESS
 
 	}
 
@@ -241,13 +241,13 @@ namespace ros_control_iso{
 		unloader.request.name = "/ros_control_iso/relay_with_hysteresis";
 		if(service_client_unloader.call(unloader)) {
 			ROS_INFO("ros_control_iso - identification_server: unloaded the controller upon srv stop request");
-			return 1;  // ros_control does not like EXIT_SUCCESS 
+			return 1;  // ros_control does not like EXIT_SUCCESS
 		} else {
 			ROS_INFO("ros_control_iso - identification_server: could not unload the controller upon srv stop request");
 			return EXIT_FAILURE;
 		}
-	}	
-	
+	}
+
 	/// private version
 	bool identification_server::stop(void) {
 		current_DOF = 0;
@@ -269,13 +269,13 @@ namespace ros_control_iso{
 		unloader.request.name = "/ros_control_iso/relay_with_hysteresis";
 		if(service_client_unloader.call(unloader)) {
 			ROS_INFO("ros_control_iso - identification_server: unloaded the controller");
-			return 1;  // ros_control does not like EXIT_SUCCESS 
+			return 1;  // ros_control does not like EXIT_SUCCESS
 		} else {
 			ROS_INFO("ros_control_iso - identification_server: could not unload the controller");
 			return EXIT_FAILURE;
 		}
 
-	}		
+	}
 
 	/** pause() pauses the current ident sequence, so that it can be resumed
 	*
@@ -288,36 +288,36 @@ namespace ros_control_iso{
 
 		/// start the ros_controller
 		controller_manager_msgs::SwitchController switcher;
-		switcher.request.start_controllers.clear();		
+		switcher.request.start_controllers.clear();
 		switcher.request.stop_controllers.push_back("/ros_control_iso/relay_with_hysteresis");
 		switcher.request.strictness = STRICT; //STRICT==2
 
 		if(service_client_switcher.call(switcher)){
 			ROS_INFO("ros_control_iso - identification_server: paused the controller upon srv pause request");
-			return 1;  // ros_control does not like EXIT_SUCCESS 
+			return 1;  // ros_control does not like EXIT_SUCCESS
 		} else{
 			ROS_ERROR("ros_control_iso - identification_server: could not pause the controller upon srv stop request");
 			return EXIT_FAILURE;
 		}
 
-	}		
+	}
 	/// private version
 	bool identification_server::pause(void) {
 
 			/// start the ros_controller
 			controller_manager_msgs::SwitchController switcher;
-			switcher.request.start_controllers.clear();		
+			switcher.request.start_controllers.clear();
 			switcher.request.stop_controllers.push_back("/ros_control_iso/relay_with_hysteresis");
 			switcher.request.strictness = STRICT; //STRICT==2
 
 			if(service_client_switcher.call(switcher)){
 				ROS_INFO("ros_control_iso - identification_server: paused the controller");
-				return 1;  // ros_control does not like EXIT_SUCCESS 
+				return 1;  // ros_control does not like EXIT_SUCCESS
 			} else{
 				ROS_ERROR("ros_control_iso - identification_server: could not pause the controller");
 				return EXIT_FAILURE;
 			}
-		}			
+		}
 } // end of namespace
 
 
@@ -331,7 +331,7 @@ int main(int argc, char **argv){
 
 
   	ROS_INFO("Services are running");
-	
+
 	ros::AsyncSpinner spinner(4); // Use 4 threads
 	spinner.start();
 	ros::waitForShutdown();

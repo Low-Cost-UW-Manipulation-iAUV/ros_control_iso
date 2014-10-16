@@ -1,10 +1,10 @@
 /**********************************************************************
-*  Copyright 2014 GNU license  
+*  Copyright 2014 GNU license
 * This controller is a relay with hysterisis. It is used to identify
 *   system parameters by following the identification by self oscillation
 *   described by Miskovic DOI: 10.1002/rob.20374
 *
-*   This controller is based on: 
+*   This controller is based on:
 *   https://github.com/ros-controls/ros_control/wiki/controller_interface
 *   and
 *   https://github.com/labust/labust-ros-pkg/tree/master/ident_so
@@ -78,15 +78,15 @@ namespace ros_control_iso{
     /** get_parameters(...) gets the parameters from the parameter server and stores them
   *   This gets the identification and relay parameters from the parameter server.
   *   List:
-  *     Joint Name 
+  *     Joint Name
   *       from it then get the joint handle
   *       check for linear or angular DOF
   *       Identification length for this DOF
   *         resize the measurements vectors
   *         resize the solution vector
   *       Relay Parameter for this DOF
-  *     
-  * 
+  *
+  *
   * \author Raphael Nagel
   * \date 18/Aug/2014
   **************************************** */
@@ -116,7 +116,7 @@ namespace ros_control_iso{
 
     } else if ( (my_joint == "yaw") || (my_joint == "pitch") || (my_joint == "roll") ) {
       linear_or_angular = ANGULAR;
-   
+
     } else {
       ROS_ERROR("ros_control - ros_control_iso: No valid joint referenced, ending\n");
       return EXIT_FAILURE;
@@ -129,7 +129,7 @@ namespace ros_control_iso{
     }
 
     param_address.clear();
-    param_address.str(""); 
+    param_address.str("");
     param_address << "/ros_control_iso/"<< my_joint << "/parameters/identification_length";
 
   /// ... and how many cycles (full waveforms) do we keep track of for the purpose of the identification.
@@ -142,10 +142,10 @@ namespace ros_control_iso{
     // now that we know the identification length resize all the vectors...
     e_max.clear();
     e_max.resize(identLen,0);
-    
+
     e_min.clear();
     e_min.resize(identLen,0);
-    
+
     t_max.clear();
     t_max.resize(identLen);
 
@@ -157,14 +157,14 @@ namespace ros_control_iso{
 
     xa_low.clear();
     xa_low.resize(identLen,0);
-    
+
     // 5 for number of parameters: alpha, kx, kxx, delta, omega_n
     solutions.clear();
     solutions.resize(5,0);
-    
+
     ///Get the relay Parameters
-    param_address.clear(); 
-    param_address.str(""); 
+    param_address.clear();
+    param_address.str("");
     param_address << "/ros_control_iso/"<< my_joint << "/parameters/relay_upper_limit";
     if (!nh_.getParam(param_address.str(), relay_upper_limit)) {
       ROS_ERROR("ros_control - ros_control_iso: Could not find upper relay switching threshold\n");
@@ -172,52 +172,52 @@ namespace ros_control_iso{
     }
 
 
-    param_address.clear();  
-    param_address.str(""); 
+    param_address.clear();
+    param_address.str("");
     param_address << "/ros_control_iso/"<< my_joint << "/parameters/relay_lower_limit";
     if (!nh_.getParam(param_address.str(), relay_lower_limit)) {
       ROS_ERROR("ros_control - ros_control_iso: Could not find lower relay switching threshold\n");
       return EXIT_FAILURE;
-    }    
+    }
 
 
     param_address.clear();
-    param_address.str(""); 
+    param_address.str("");
     param_address << "/ros_control_iso/"<< my_joint << "/parameters/relay_amplitude_out_inNewtons";
     if (!nh_.getParam(param_address.str(), relay_amplitude_out)){
       ROS_ERROR("ros_control - ros_control_iso: Could not find relay amplitude out value\n");
       return EXIT_FAILURE;
-    }  
+    }
 
 
     param_address.clear();
-    param_address.str(""); 
+    param_address.str("");
     param_address << "/ros_control_iso/"<< my_joint << "/parameters/position_reference";
     if (!nh_.getParam(param_address.str(), position_reference)){
       ROS_ERROR("ros_control - ros_control_iso: Could not find position_reference, assuming 0\n");
       position_reference = 0;
-    } 
+    }
 
 
     param_address.clear();
-    param_address.str(""); 
-    param_address << "/ros_control_iso/"<< my_joint << "/parameters/e_max_error";  
+    param_address.str("");
+    param_address << "/ros_control_iso/"<< my_joint << "/parameters/e_max_error";
     if (!nh_.getParam(param_address.str(), eMaxError)){
       ROS_ERROR("ros_control - ros_control_iso: Could not find e_max_error, assuming 0.1\n");
       eMaxError = 0.1;
       nh_.setParam(param_address.str(), eMaxError);
-    } 
+    }
 
 
     param_address.clear();
-    param_address.str(""); 
-    param_address << "/ros_control_iso/"<< my_joint << "/parameters/e_min_error";      
+    param_address.str("");
+    param_address << "/ros_control_iso/"<< my_joint << "/parameters/e_min_error";
     if (!nh_.getParam(param_address.str(), eMinError)){
       ROS_ERROR("ros_control - ros_control_iso: Could not find e_min_error, assuming 0.1\n");
       eMinError = 0.1;
       nh_.setParam(param_address.str(), eMinError);
-    }   
-    return 1;  // The controller_manager does not like the EXIT_SUCCESS 
+    }
+    return 1;  // The controller_manager does not like the EXIT_SUCCESS
   }
 
 
@@ -231,14 +231,14 @@ namespace ros_control_iso{
     //ROS_INFO("ros_control - ros_control_iso: Updating the controller output.\n");
     static double command_out = relay_amplitude_out;
     current_position = joint_.getPosition();
-    
+
     do_Identification_Step();
-   
+
     //Do the relay's job
 
     //If we have crossed the threshold rising edge and we are still driving upwards-->drive downwards
-    if( (current_position > relay_upper_limit) && ( joint_.getCommand() == ( relay_amplitude_out) ) ){         
-   
+    if( (current_position > relay_upper_limit) && ( joint_.getCommand() == ( relay_amplitude_out) ) ){
+
 
       command_out = (-1) * relay_amplitude_out;
       joint_.setCommand(command_out);
@@ -250,31 +250,31 @@ namespace ros_control_iso{
     }else
 
     //same for going down-->start driving upwards
-    if( ( current_position < relay_lower_limit) && ( joint_.getCommand() == ( (-1) * relay_amplitude_out) ) ){    
-   
+    if( ( current_position < relay_lower_limit) && ( joint_.getCommand() == ( (-1) * relay_amplitude_out) ) ){
+
       command_out = relay_amplitude_out;
       joint_.setCommand(command_out);
 
       /// The control output is rising
       do_Identification_Switched(RISING_EDGE , time);
       do_Identification_Parameter_Calculation();
-   
+
     }
-    
+
 
     if(finished == TRUE){
 
       // run the stuff below only once.
       if(notified_server == FALSE){
         joint_.setCommand(0);
-        /// set the thruster output to       
+        /// set the thruster output to
         ROS_INFO("ros_control - ros_control_iso: Identified the following parameters for axis %s: alpha: %f, k_x: %f, k_xx: %f, delta: %f, omega_n: %f. \n", my_joint.c_str(), solutions[ALPHA], solutions[KX], solutions[KXX], solutions[DELTA], solutions[OMEGA_N]);
         /// store the ISO solution in the parameter server
         store_I_SO_Solution();
 
         //Publish the state using the realtime safe way.
         real_time_publish(time);
-      
+
         /// Tell the identification server that we want the next DOF to identify
         ros_control_iso::nextDOF do_next;
         do_next.request.now = my_joint;
@@ -294,15 +294,15 @@ namespace ros_control_iso{
   * \author Raphael Nagel
   * \date 18/Aug/2014
   **************************************** */
-  void relay_with_hysteresis::starting(const ros::Time& time) { 
+  void relay_with_hysteresis::starting(const ros::Time& time) {
 
-    //reset the current waveform measurements 
+    //reset the current waveform measurements
     reset_waveform_meas();
     ROS_INFO("ros_control - ros_control_iso: starting the controller. \n");
 
     /// get the parameters to maybe change the relay settings.
     if (get_parameters()) {
-      ROS_INFO("ros_control_iso - relay_with_hysteresis: got parameters"); 
+      ROS_INFO("ros_control_iso - relay_with_hysteresis: got parameters");
       ///Start the procedure off
       joint_.setCommand(relay_amplitude_out);
 
@@ -314,12 +314,12 @@ namespace ros_control_iso{
   }
 
   /** stopping() gets called when the controller is being stopped, it sets output to 0
-  * 
+  *
   *
   * \author Raphael Nagel
   * \date 18/Aug/2014
   **************************************** */
-  void relay_with_hysteresis::stopping(const ros::Time& time) { 
+  void relay_with_hysteresis::stopping(const ros::Time& time) {
     joint_.setCommand(0);
     ROS_INFO("ros_control - ros_control_iso: Relay is stopping, output set to 0\n");
   }
@@ -356,7 +356,7 @@ namespace ros_control_iso{
   }
 
   /** do_Identification_Switched() is the ros_control_iso data collection step
-  * It is run at every relay switch. 
+  * It is run at every relay switch.
   * This means it executes once per half waveform of the position waveform plot caused by the self oscillationh_.
   *
   * \param rising_falling Indicates a rising edge or falling edge relay limit trigger causing a relay output switch.
@@ -377,7 +377,7 @@ namespace ros_control_iso{
       e_max[counterHigh] = maxPosition_encountered;
       t_max[counterHigh] = tSum;
       tSum = 0;
-      counterHigh=(counterHigh+1)%identLen;      
+      counterHigh=(counterHigh+1)%identLen;
 
     }else{
       ROS_ERROR("ros_control - ros_control_iso: Relay switched neither up nor down\n");
@@ -388,7 +388,7 @@ namespace ros_control_iso{
 
     //reset the maximum position encountered
     maxPosition_encountered = -std::numeric_limits<double>::max();
-    minPosition_encountered  = std::numeric_limits<double>::max(); 
+    minPosition_encountered  = std::numeric_limits<double>::max();
 
     return EXIT_SUCCESS;
   }
@@ -399,16 +399,16 @@ namespace ros_control_iso{
    if(controller_state_publisher_ && controller_state_publisher_->trylock()){
       controller_state_publisher_->msg_.header.stamp = time;
       controller_state_publisher_->msg_.header.seq = sequence;
-      controller_state_publisher_->msg_.set_point = position_reference; // 
+      controller_state_publisher_->msg_.set_point = position_reference; //
       controller_state_publisher_->msg_.error = position_error;
       controller_state_publisher_->msg_.process_value = current_position;
-      controller_state_publisher_->msg_.process_value_dot = minMaxError;            
+      controller_state_publisher_->msg_.process_value_dot = minMaxError;
       controller_state_publisher_->msg_.command = joint_.getCommand();
-      controller_state_publisher_->unlockAndPublish();  
-      sequence++;  
+      controller_state_publisher_->unlockAndPublish();
+      sequence++;
       return EXIT_SUCCESS;
     }
-    return EXIT_FAILURE;   
+    return EXIT_FAILURE;
   }
   /** do_Identification_Parameter_Calculation() calculates the Systems characteristic parameters
   *
@@ -473,7 +473,7 @@ namespace ros_control_iso{
     std::ostringstream param_address;
 
     param_address.clear();
-    param_address.str(""); 
+    param_address.str("");
 
     param_address << "/ros_control_iso/" << my_joint << "/solution/alpha";
     ros::param::set(param_address.str(), solutions[ALPHA]);
@@ -484,7 +484,7 @@ namespace ros_control_iso{
       }
     }
     param_address.clear();
-    param_address.str(""); 
+    param_address.str("");
 
     param_address << "/ros_control_iso/" << my_joint << "/solution/k_x";
     ros::param::set(param_address.str(), solutions[KX]);
@@ -495,7 +495,7 @@ namespace ros_control_iso{
       }
     }
     param_address.clear();
-    param_address.str(""); 
+    param_address.str("");
 
     param_address << "/ros_control_iso/" << my_joint << "/solution/k_xx";
     ros::param::set(param_address.str(), solutions[KXX]);
@@ -506,7 +506,7 @@ namespace ros_control_iso{
       }
     }
     param_address.clear();
-    param_address.str(""); 
+    param_address.str("");
 
     param_address << "/ros_control_iso/" << my_joint << "/solution/delta";
     ros::param::set(param_address.str(), solutions[DELTA]);
@@ -517,7 +517,7 @@ namespace ros_control_iso{
       }
     }
     param_address.clear();
-    param_address.str(""); 
+    param_address.str("");
 
     param_address << "/ros_control_iso/" << my_joint << "/solution/omega_n";
     ros::param::set(param_address.str(), solutions[OMEGA_N]);

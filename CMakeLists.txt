@@ -22,14 +22,14 @@ find_package(catkin REQUIRED COMPONENTS
 include_directories(include ${Boost_INCLUDE_DIR} ${catkin_INCLUDE_DIRS})
 
 add_service_files(
-	DIRECTORY srv 
+	DIRECTORY srv
 	FILES nextDOF.srv)
 
 
 generate_messages(
 	DEPENDENCIES
 	std_msgs
-	std_srvs	
+	std_srvs
 	)
 
 
@@ -70,5 +70,3 @@ install(FILES 	relay_with_hysteresis.xml
 				I-SO.yaml
 				relay_with_hysteresis.launch
 DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
-
-
