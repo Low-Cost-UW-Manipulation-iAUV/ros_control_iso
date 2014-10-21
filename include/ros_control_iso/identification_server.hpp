@@ -33,46 +33,46 @@
 
 namespace ros_control_iso {
 
-	//  system states
-	#define DOF_FINISHED 1
-	#define ALL_FINISHED 2
-	#define RUNNING 3
-	#define ERROR 4
+    //  system states
+    #define DOF_FINISHED 1
+    #define ALL_FINISHED 2
+    #define RUNNING 3
+    #define ERROR 4
 
-	class identification_server {
+    class identification_server {
     public:
-		identification_server(const ros::NodeHandle &);
-		~identification_server();
-		bool next_DOF(ros_control_iso::nextDOF::Request&, ros_control_iso::nextDOF::Response&);
-		bool start(std_srvs::Empty::Request& , std_srvs::Empty::Response&);
-		bool stop(std_srvs::Empty::Request& , std_srvs::Empty::Response&);
-		bool pause(std_srvs::Empty::Request& , std_srvs::Empty::Response&);
+        identification_server(const ros::NodeHandle &);
+        ~identification_server();
+        bool next_DOF(ros_control_iso::nextDOF::Request&, ros_control_iso::nextDOF::Response&);
+        bool start(std_srvs::Empty::Request& , std_srvs::Empty::Response&);
+        bool stop(std_srvs::Empty::Request& , std_srvs::Empty::Response&);
+        bool pause(std_srvs::Empty::Request& , std_srvs::Empty::Response&);
 
     private:
-		void update(const ros::TimerEvent&);
-		bool restart(void);
-		bool stop(void);
-		bool pause(void);
-		unsigned int system_state;
+        void update(const ros::TimerEvent&);
+        bool restart(void);
+        bool stop(void);
+        bool pause(void);
+        unsigned int system_state;
 
-		ros::Timer non_realtime_loop_;
+        ros::Timer non_realtime_loop_;
 
-		ros::ServiceServer service1;
-		ros::ServiceServer service2;
-		ros::ServiceServer service3;
-		ros::ServiceServer service4;
-
-
-		int num_of_DOF;
-		int current_DOF;
-		ros::NodeHandle nh_;
-		ros::ServiceClient service_client_switcher;
-		ros::ServiceClient service_client_loader;
-		ros::ServiceClient service_client_unloader;
+        ros::ServiceServer service1;
+        ros::ServiceServer service2;
+        ros::ServiceServer service3;
+        ros::ServiceServer service4;
 
 
-		std::vector<std::string> list_to_ident;
-	};
+        int num_of_DOF;
+        int current_DOF;
+        ros::NodeHandle nh_;
+        ros::ServiceClient service_client_switcher;
+        ros::ServiceClient service_client_loader;
+        ros::ServiceClient service_client_unloader;
+
+
+        std::vector<std::string> list_to_ident;
+    };
 };  // end of namespace
 
 #endif

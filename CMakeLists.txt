@@ -54,7 +54,11 @@ add_library(${PROJECT_NAME} src/relay_with_hysteresis.cpp )
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
 
 add_executable(identification_server src/identification_server.cpp)
+add_executable(tune_controller src/tune_controller.cpp)
+
 target_link_libraries(identification_server ${catkin_LIBRARIES})
+target_link_libraries(tune_controller ${catkin_LIBRARIES})
+
 add_dependencies(identification_server ros_control_iso_generate_messages_cpp std_srvs_generate_messages_cpp)
 
 

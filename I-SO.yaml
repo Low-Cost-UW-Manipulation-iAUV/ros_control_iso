@@ -19,11 +19,12 @@ ros_control_iso: #The Identification by Self-Oscillation parameter server parame
       e_max_error : 0.3
       e_min_error : 0.3
     solution:
-      alpha : 0
-      k_xx : 0
+      alpha : 100
+      k_x : 50
       k_xx : 0
       delta : 0
       omega_n : 0
+    desired_tf: [0,1,1,1]   # denominator [s^0, s^1, s^2, s^3]
   y:
     parameters :
       identification_length : 10
@@ -34,11 +35,12 @@ ros_control_iso: #The Identification by Self-Oscillation parameter server parame
       e_max_error : 0.3
       e_min_error : 0.3
     solution:
-      alpha : 0
-      k_xx : 0
+      alpha : 100
+      k_x : 50
       k_xx : 0
       delta : 0
       omega_n : 0
+    desired_tf: [0, 0, 0, 1]  # denominator [s^0, s^1, s^2, s^3]      
   z:
     parameters :
       identification_length : 10
@@ -50,10 +52,11 @@ ros_control_iso: #The Identification by Self-Oscillation parameter server parame
       e_min_error : 0.3
     solution:
       alpha : 0
-      k_xx : 0
+      k_x : 0
       k_xx : 0
       delta : 0
       omega_n : 0
+    desired_tf: [0, 0, 0, 1]  # denominator [s^0, s^1, s^2, s^3]      
   yaw:
     parameters :
       identification_length : 10
@@ -65,10 +68,11 @@ ros_control_iso: #The Identification by Self-Oscillation parameter server parame
       e_min_error : 0.3
     solution:
       alpha : 0
-      k_xx : 0
+      k_x : 0
       k_xx : 0
       delta : 0
       omega_n : 0
+    desired_tf: [0, 0, 0, 0]  # denominator[s^0, s^1, s^2, s^3]
   pitch:
     parameters :
       identification_length : 10
@@ -80,7 +84,9 @@ ros_control_iso: #The Identification by Self-Oscillation parameter server parame
       e_min_error : 0.3
     solution:
       alpha : 0
-      k_xx : 0
+      k_x : 0
       k_xx : 0
       delta : 0
       omega_n : 0
+    desired_tf: [0, 0, 0, 1]  # denominator [s^0, s^1, s^2, s^3]
+

@@ -1,6 +1,7 @@
 /**********************************************************************
 *   Copyright 2014 GNU License
-*	This node controls the 5 DOF Identification by self-oscillation is a relay with hysterisis.
+*	This node controls the 5 DOF Identification by self-oscillation. 
+*	It will load and unload the relay_with_hysteresis controller 
 *	It is used to identify
 *   system parameters by following the identification by self oscillation
 *   described by Miskovic DOI: 10.1002/rob.20374
