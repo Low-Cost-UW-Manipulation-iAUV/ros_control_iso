@@ -22,7 +22,7 @@
 
 #include <hardware_interface/joint_command_interface.h>
 
-#include "ros_control_iso/NumberManipulation.hpp""
+#include "ros_control_iso/NumberManipulation.hpp"
 
 #include "ros_control_iso/relay_with_hysteresis.hpp"
 #include "ros_control_iso/nextDOF.h"
