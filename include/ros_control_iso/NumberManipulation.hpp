@@ -36,7 +36,7 @@
 
 #define _USE_MATH_DEFINES
 #include <cmath>
-#include <labust/math/Limits.hpp>
+#include "ros_control_iso/Limits.hpp"
 
 namespace labust
 {
