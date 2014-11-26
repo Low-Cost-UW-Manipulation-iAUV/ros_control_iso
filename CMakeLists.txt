@@ -11,7 +11,6 @@ find_package(catkin REQUIRED COMPONENTS
 	control_toolbox
 	realtime_tools
 	urdf
-	snippets
 	message_generation
 	roscpp
 	std_srvs

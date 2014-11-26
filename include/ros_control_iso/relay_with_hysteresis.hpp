@@ -72,6 +72,13 @@ namespace ros_control_iso{
 		int get_parameters(void);
 		void reset_waveform_meas(void);
 
+    	double mean(const std::vector<double>);
+    	double std2(const std::vector<double>, const double );   
+		double wrapRad(double );
+		double wrapDeg(double );
+
+
+
 		// Relay Parameters:
 		unsigned int sequence;
 		double current_position;

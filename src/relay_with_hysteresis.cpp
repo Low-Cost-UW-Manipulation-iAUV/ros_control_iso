@@ -22,7 +22,6 @@
 
 #include <hardware_interface/joint_command_interface.h>
 
-#include <labust/math/NumberManipulation.hpp>
 
 #include "ros_control_iso/relay_with_hysteresis.hpp"
 #include "ros_control_iso/nextDOF.h"
@@ -340,8 +339,8 @@ namespace ros_control_iso{
 
     //Handle angular values and angular wrapping, maps it into +- pi range
     if (linear_or_angular == ANGULAR) {
-      position_error = labust::math::wrapRad(
-          labust::math::wrapRad(position_reference) - labust::math::wrapRad(current_position)
+      position_error = wrapRad(
+          wrapRad(position_reference) - wrapRad(current_position)
         );
     }
 
@@ -418,17 +417,17 @@ namespace ros_control_iso{
   **************************************** */
   void relay_with_hysteresis::do_Identification_Parameter_Calculation(void) {
 
-    double meanEMax = labust::math::mean(e_max);  // Mean of the maximum position encountered
-    double stdEMax = labust::math::std2(e_max, meanEMax);  // calculate the standard deviation for that measurement
+    double meanEMax = mean(e_max);  // Mean of the maximum position encountered
+    double stdEMax = std2(e_max, meanEMax);  // calculate the standard deviation for that measurement
 
-    double meanEMin = labust::math::mean(e_min);  // Mean of the minimuim (negative) encountered
-    double stdEMin = labust::math::std2(e_min, meanEMin);  // calculate the standard deviation for that measurement
+    double meanEMin = mean(e_min);  // Mean of the minimuim (negative) encountered
+    double stdEMin = std2(e_min, meanEMin);  // calculate the standard deviation for that measurement
 
-    double meanTMax = labust::math::mean(t_max);  // Mean of the time taken for each positive halfcycle
-    double meanTMin = labust::math::mean(t_min);  // Mean of the time taken for each negative halfcycle
+    double meanTMax = mean(t_max);  // Mean of the time taken for each positive halfcycle
+    double meanTMin = mean(t_min);  // Mean of the time taken for each negative halfcycle
 
-    double meanXaLow = labust::math::mean(xa_low);  // acctual position when the switch happened during negative halfcycle
-    double meanXaHigh = labust::math::mean(xa_high);
+    double meanXaLow = mean(xa_low);  // acctual position when the switch happened during negative halfcycle
+    double meanXaHigh = mean(xa_high);
 
     double T = (meanTMax + meanTMin);     // Average time a complete cycle takes
     double Xm = (0.5 * (meanEMax - meanEMin) );  // maximum Amplitude of the waveform
@@ -529,6 +528,51 @@ namespace ros_control_iso{
     }
     return EXIT_SUCCESS;
   }
+
+  /** mean(): calculates the mean
+  */
+  double relay_with_hysteresis::mean(const std::vector<double> vec) {
+    double sum = 0;
+    unsigned int size = 0;
+    for (typename std::vector<double>::const_iterator it = vec.begin(); it!=vec.end(); ++it, ++size) { 
+        sum += (*it);
+        // if size is not == 0, divide by size, else return 0
+    }
+    return (size)?(sum/size):0;
+  }
+
+  /** std2(): find the std_deviation across our current_range
+  */
+  double relay_with_hysteresis::std2(const std::vector<double> vec, const double mean) {
+    double sum = 0;
+    unsigned int size = 0;
+    for(typename std::vector<double>::const_iterator it = vec.begin(); it != vec.end(); ++it) {
+        sum+=std::pow(((*it) - mean),2);
+         ++size;
+    }
+    // if size is not == 0, divide by size, else return 0            
+    return size?std::sqrt(sum/size):-1;   
+  }
+
+  double relay_with_hysteresis::wrapRad(double angle) {
+    angle = fmod(angle,2*M_PI);
+    if (angle > M_PI) return -2*M_PI + angle;
+    if (angle <= -M_PI) return 2*M_PI + angle;
+    return angle;
+  }
+  /**
+  * The function wraps any value into the [-180,180> range.
+  *
+  * \param angle The arbitrary value.
+  * \return The wrapped value in the [-pi,pi> interval.
+  */
+double relay_with_hysteresis::wrapDeg(double angle) {
+  angle = fmod(angle,360.);
+  if (angle > 180) return -360. + angle;
+  if (angle <= -180) return 360. + angle;
+  return angle;
 }
+
+} // end of namespace
 
 PLUGINLIB_EXPORT_CLASS(ros_control_iso::relay_with_hysteresis, controller_interface::ControllerBase)
