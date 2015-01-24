@@ -199,7 +199,7 @@ namespace ros_control_iso{
 		}
 	}
 
-	//private version
+	// private version
 	bool identification_server::restart(void) {
 
 		/// start the ros_controller

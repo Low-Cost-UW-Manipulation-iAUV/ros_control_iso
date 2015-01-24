@@ -1,0 +1,5 @@
+<launch>
+    <rosparam command="load" file="$(find ros_control_iso)/I-SO.yaml" />
+	<node name="ros_control_iso" pkg="ros_control_iso" type="identification_server" output="screen" >
+  	r</node>
+  </launch>
