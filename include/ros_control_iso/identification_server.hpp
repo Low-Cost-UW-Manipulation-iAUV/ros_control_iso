@@ -19,7 +19,7 @@
 #include <ros/ros.h>
 #include <ros/node_handle.h>
 
-#include "ros_control_iso/nextDOF.h"
+#include "ros_control_iso/string_ok.h"
 #include "std_srvs/Empty.h"
 
 #include "controller_manager_msgs/SwitchController.h"
@@ -43,7 +43,7 @@ namespace ros_control_iso {
     public:
         identification_server(const ros::NodeHandle &);
         ~identification_server();
-        bool next_DOF(ros_control_iso::nextDOF::Request&, ros_control_iso::nextDOF::Response&);
+        bool next_DOF(ros_control_iso::string_ok::Request&, ros_control_iso::string_ok::Response&);
         bool start(std_srvs::Empty::Request& , std_srvs::Empty::Response&);
         bool stop(std_srvs::Empty::Request& , std_srvs::Empty::Response&);
         bool pause(std_srvs::Empty::Request& , std_srvs::Empty::Response&);
@@ -69,6 +69,7 @@ namespace ros_control_iso {
         ros::ServiceClient service_client_switcher;
         ros::ServiceClient service_client_loader;
         ros::ServiceClient service_client_unloader;
+        ros::ServiceClient service_client_ISO_reference;
 
 
         std::vector<std::string> list_to_ident;

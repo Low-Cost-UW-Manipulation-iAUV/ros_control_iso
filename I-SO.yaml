@@ -5,16 +5,16 @@ ros_control_iso: #The Identification by Self-Oscillation parameter server parame
     joint: x
     publish_rate: 60
   joint : x # the current DOF that is being identified
-  list_to_ident: [x,y,z,yaw] # the DOFs to identify
-  num_of_DOF: 3 #number of items in the list above
+  list_to_ident: [x,pitch, yaw] # the DOFs to identify
+  num_of_DOF: 5 #number of items in the list above
   identification_server_update_rate: 5
 # The parameters for each axis
   x:
     parameters :
       identification_length : 10
-      relay_upper_limit : 22.5
-      relay_lower_limit : -22.5
-      relay_amplitude_out_inNewtons : 17.09E-2
+      relay_upper_limit : 0.05
+      relay_lower_limit : -0.05
+      relay_amplitude_out_inNewtons : 1
       position_reference : 0
       e_max_error : 0.3
       e_min_error : 0.3
@@ -24,13 +24,13 @@ ros_control_iso: #The Identification by Self-Oscillation parameter server parame
       k_xx : 0
       delta : 0
       omega_n : 0
-    desired_tf: [0,1,1,1]   # denominator [s^0, s^1, s^2, s^3]
+    desired_tf: [1.078593438227702e-4,0.011001653069923,0.127599202439703,1]   # denominator [s^0, s^1, s^2, s^3], 10% overshoot, 0.5s settling time...possibly to much...
   y:
     parameters :
       identification_length : 10
-      relay_upper_limit : 22.5
-      relay_lower_limit : -22.5
-      relay_amplitude_out_inNewtons : 17.09E-2
+      relay_upper_limit : 0.05
+      relay_lower_limit : -0.05
+      relay_amplitude_out_inNewtons : 1
       position_reference : 0
       e_max_error : 0.3
       e_min_error : 0.3
@@ -40,13 +40,13 @@ ros_control_iso: #The Identification by Self-Oscillation parameter server parame
       k_xx : 0
       delta : 0
       omega_n : 0
-    desired_tf: [0, 0, 0, 1]  # denominator [s^0, s^1, s^2, s^3]      
+    desired_tf: [1.078593438227702e-4,0.011001653069923,0.127599202439703,1]   # denominator [s^0, s^1, s^2, s^3]
   z:
     parameters :
       identification_length : 10
-      relay_upper_limit : 22.5
-      relay_lower_limit : -22.5
-      relay_amplitude_out_inNewtons : 17.09E-2
+      relay_upper_limit : 0.05
+      relay_lower_limit : -0.05
+      relay_amplitude_out_inNewtons : 1
       position_reference : 0
       e_max_error : 0.3
       e_min_error : 0.3
@@ -56,13 +56,13 @@ ros_control_iso: #The Identification by Self-Oscillation parameter server parame
       k_xx : 0
       delta : 0
       omega_n : 0
-    desired_tf: [0, 0, 0, 1]  # denominator [s^0, s^1, s^2, s^3]      
+    desired_tf: [1.078593438227702e-4,0.011001653069923,0.127599202439703,1]   # denominator [s^0, s^1, s^2, s^3]
   yaw:
     parameters :
       identification_length : 10
-      relay_upper_limit : 2.25 # This should be in RAD
-      relay_lower_limit : -2.25
-      relay_amplitude_out_inNewtons : 17.09E-2
+      relay_upper_limit : 0.05235987756# This should be in RAD
+      relay_lower_limit : -0.05235987756
+      relay_amplitude_out_inNewtons : 3
       position_reference : 0
       e_max_error : 0.3
       e_min_error : 0.3
@@ -72,13 +72,13 @@ ros_control_iso: #The Identification by Self-Oscillation parameter server parame
       k_xx : 0
       delta : 0
       omega_n : 0
-    desired_tf: [0, 0, 0, 0]  # denominator[s^0, s^1, s^2, s^3]
+    desired_tf: [1.078593438227702e-4,0.011001653069923,0.127599202439703,1]   # denominator [s^0, s^1, s^2, s^3]
   pitch:
     parameters :
       identification_length : 10
-      relay_upper_limit : 22.5
-      relay_lower_limit : -22.5
-      relay_amplitude_out_inNewtons : 17.09E-2
+      relay_upper_limit : 0.05235987756
+      relay_lower_limit : -0.05235987756
+      relay_amplitude_out_inNewtons : 3
       position_reference : 0
       e_max_error : 0.3
       e_min_error : 0.3
@@ -88,5 +88,5 @@ ros_control_iso: #The Identification by Self-Oscillation parameter server parame
       k_xx : 0
       delta : 0
       omega_n : 0
-    desired_tf: [0, 0, 0, 1]  # denominator [s^0, s^1, s^2, s^3]
+    desired_tf: [1.078593438227702e-4,0.011001653069923,0.127599202439703,1]   # denominator [s^0, s^1, s^2, s^3]
 

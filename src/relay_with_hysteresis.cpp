@@ -25,7 +25,7 @@
 #include "ros_control_iso/NumberManipulation.hpp"
 
 #include "ros_control_iso/relay_with_hysteresis.hpp"
-#include "ros_control_iso/nextDOF.h"
+#include "ros_control_iso/string_ok.h"
 
 
 
@@ -54,7 +54,7 @@ namespace ros_control_iso{
     controller_state_publisher_.reset(new realtime_tools::RealtimePublisher<control_msgs::JointControllerState>(n, "state", 1) );
     ROS_INFO("ros_control_iso - relay_with_hysteresis: RealtimePublisher started\n");
 
-    next_client = nh_.serviceClient<ros_control_iso::nextDOF>("/ros_control_iso/nextDOF");
+    next_client = nh_.serviceClient<ros_control_iso::string_ok>("/ros_control_iso/next_DOF");
 
     //return EXIT_SUCCESS;
     return 1;
@@ -236,9 +236,11 @@ namespace ros_control_iso{
     do_Identification_Step();
 
     //Do the relay's job
+    ROS_INFO("%s - current_position: %f, relay limits [u, l]: [%f, %f]", my_joint.c_str(), current_position, relay_upper_limit, relay_lower_limit);
+    ROS_INFO("%s - current_command: %f, relay_amplitude_out: %f", my_joint.c_str(), joint_.getCommand(), relay_amplitude_out);
 
     //If we have crossed the threshold rising edge and we are still driving upwards-->drive downwards
-    if( (current_position > relay_upper_limit) && ( joint_.getCommand() == ( relay_amplitude_out) ) ){
+    if( (current_position > (relay_upper_limit + position_reference) ) && ( joint_.getCommand() == ( relay_amplitude_out) ) ){
 
 
       command_out = (-1) * relay_amplitude_out;
@@ -251,7 +253,7 @@ namespace ros_control_iso{
     }else
 
     //same for going down-->start driving upwards
-    if( ( current_position < relay_lower_limit) && ( joint_.getCommand() == ( (-1) * relay_amplitude_out) ) ){
+    if( ( current_position < (relay_lower_limit + position_reference) ) && ( joint_.getCommand() == ( (-1) * relay_amplitude_out) ) ){
 
       command_out = relay_amplitude_out;
       joint_.setCommand(command_out);
@@ -277,8 +279,8 @@ namespace ros_control_iso{
         real_time_publish(time);
 
         /// Tell the identification server that we want the next DOF to identify
-        ros_control_iso::nextDOF do_next;
-        do_next.request.now = my_joint;
+        ros_control_iso::string_ok do_next;
+        do_next.request.data = my_joint;
         if(next_client.call(do_next)){
           ROS_INFO("ros_control_iso - relay_with_hysteresis: identification server called");
         } else{
@@ -454,12 +456,13 @@ namespace ros_control_iso{
 
     // std::cout<<"Xa_star"<<xa_star<<", X0"<<X0<<std::endl;
     // std::cout<<"Alpha = "<<solutions[ALPHA]<<", Kx = "<<solutions[KX]<<", Kxx = "<<solutions[KXX]<<", Delta:"<<solutions[DELTA]<<", w:"<<omega<<std::endl;
-    // ROS_INFO("ros_control - ros_control_iso: rawish stuff: relay_amplitude_out: %f, sq1: %f, sq2: %f, omega: %f, Xm: %f, M_PI: %F \n", relay_amplitude_out, sq1, sq2, omega, Xm, M_PI );
-    // ROS_INFO("ros_control - ros_control_iso: intmed. solutions: alpha: %f, k_x: %f, k_xx: %f, delta: %f, omega_n: %f. \n", solutions[ALPHA], solutions[KX], solutions[KXX], solutions[DELTA], solutions[OMEGA_N]);
+     ROS_INFO("ros_control - ros_control_iso: x_a*: %f", xa_star);
+     ROS_INFO("ros_control - ros_control_iso: rawish stuff: relay_amplitude_out: %f, sq1: %f, sq2: %f, omega: %f, Xm: %f", relay_amplitude_out, sq1, sq2, omega, Xm);
+     ROS_INFO("ros_control - ros_control_iso: intmed. solutions: alpha: %f, k_x: %f, k_xx: %f, delta: %f, omega_n: %f. \n", solutions[ALPHA], solutions[KX], solutions[KXX], solutions[DELTA], solutions[OMEGA_N]);
 
     /// Test eMAX / eMIN standard deviation of this axis identification
     finished = ( (std::fabs(stdEMax / meanEMax) < eMaxError)  &&  (std::fabs(stdEMin / meanEMin) < eMinError) );
-    // ROS_ERROR("eMaxError is currently: %f, eMinError is currently: %f",(stdEMax / meanEMax), (stdEMin / meanEMin));
+     ROS_ERROR("eMaxError is currently: %f, eMinError is currently: %f",(stdEMax / meanEMax), (stdEMin / meanEMin));
     minMaxError = ( std::fabs(stdEMax / meanEMax) + std::fabs(stdEMin / meanEMin)) / 2;
   }
 

@@ -82,7 +82,6 @@ namespace ros_control_iso{
 		// Relay Parameters:
 		unsigned int sequence;
 		double current_position;
-
 		ros::NodeHandle nh_;
 		double position_error;
 

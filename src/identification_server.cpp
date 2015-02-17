@@ -30,9 +30,9 @@ namespace ros_control_iso{
 		service_client_switcher = nh_.serviceClient<controller_manager_msgs::SwitchController>("/controller_manager/switch_controller");
 		service_client_loader = nh_.serviceClient<controller_manager_msgs::LoadController>("/controller_manager/load_controller");
 		service_client_unloader = nh_.serviceClient<controller_manager_msgs::UnloadController>("/controller_manager/unload_controller");
-
+		service_client_ISO_reference = nh_.serviceClient<ros_control_iso::string_ok>("/hw_loop/setIsoReference");
 		/// register the services offered by this node
-		service1 = nh_.advertiseService("/ros_control_iso/nextDOF", &identification_server::next_DOF, this);
+		service1 = nh_.advertiseService("/ros_control_iso/next_DOF", &identification_server::next_DOF, this);
 		service2 = nh_.advertiseService("/ros_control_iso/start", &identification_server::start, this);
 		service3 = nh_.advertiseService("/ros_control_iso/stop", &identification_server::stop, this);
 		service4 = nh_.advertiseService("/ros_control_iso/pause", &identification_server::pause, this);
@@ -95,10 +95,10 @@ namespace ros_control_iso{
 	* \author Raphael Nagel
 	* \date 29/Sep/2014
 	**************************************** */
-	bool identification_server::next_DOF(ros_control_iso::nextDOF::Request &req, ros_control_iso::nextDOF::Response &res) {
+	bool identification_server::next_DOF(ros_control_iso::string_ok::Request &req, ros_control_iso::string_ok::Response &res) {
 
 		/// check if the node and I talking about the same DOF
-		if(list_to_ident[current_DOF] == req.now) {
+		if(list_to_ident[current_DOF] == req.data) {
 
 			/// Take the next DOF...
 			current_DOF++;
@@ -174,6 +174,14 @@ namespace ros_control_iso{
 
 		} else { // successfully set it, so now start the ros_control controller
 
+			// Set the reference point for the ISO
+			ros_control_iso::string_ok ref_setter;
+			ref_setter.request.data = "ISO";
+			while(service_client_ISO_reference.call(ref_setter) != 1) {
+
+			}
+
+			// Load the relay
 			controller_manager_msgs::LoadController loader;
 			loader.request.name = "/ros_control_iso/relay_with_hysteresis";
 			if(service_client_loader.call(loader)){
@@ -202,6 +210,12 @@ namespace ros_control_iso{
 	// private version
 	bool identification_server::restart(void) {
 
+		// Set the reference point for the ISO
+		ros_control_iso::string_ok ref_setter;
+		ref_setter.request.data = "ISO";
+		while(service_client_ISO_reference.call(ref_setter) != 1) {
+
+		}		
 		/// start the ros_controller
 		controller_manager_msgs::SwitchController switcher;
 		switcher.request.start_controllers.push_back("/ros_control_iso/relay_with_hysteresis");
@@ -225,7 +239,12 @@ namespace ros_control_iso{
 	**************************************** */
 	bool identification_server::stop(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response) {
 		current_DOF = 0;
+		// Set the reference point for the ISO
+		ros_control_iso::string_ok ref_setter;
+		ref_setter.request.data = "pool";
+		while(service_client_ISO_reference.call(ref_setter) != 1) {
 
+		}		
 		/// start the ros_controller
 		controller_manager_msgs::SwitchController switcher;
 		switcher.request.start_controllers.clear();

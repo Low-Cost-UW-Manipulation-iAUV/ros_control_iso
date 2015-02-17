@@ -7,7 +7,6 @@ find_package(catkin REQUIRED COMPONENTS
 	hardware_interface
 	pluginlib
 	control_msgs
-	#forward_command_controller
 	control_toolbox
 	realtime_tools
 	urdf
@@ -22,7 +21,7 @@ include_directories(include ${Boost_INCLUDE_DIR} ${catkin_INCLUDE_DIRS})
 
 add_service_files(
 	DIRECTORY srv
-	FILES nextDOF.srv)
+	FILES string_ok.srv)
 
 
 generate_messages(
@@ -42,7 +41,6 @@ catkin_package(
 		realtime_tools
 		urdf
 		roscpp
-		forward_command_controller
 		pluginlib
 	INCLUDE_DIRS include
 	LIBRARIES ${PROJECT_NAME}
