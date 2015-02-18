@@ -148,21 +148,14 @@ namespace ros_control_iso{
 	* \date 29/Sep/2014
 	**************************************** */
 	bool identification_server::start(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response) {
-		num_of_DOF = 0;
-
-		/// find out which DOF you want me to identify
-		if(!nh_.getParam("/ros_control_iso/num_of_DOF", num_of_DOF)) {
-			ROS_ERROR("ros_control_iso - identification_server: couldnt get number of DOFs");
-			return EXIT_FAILURE;
-		}
 
 
 		/// fit the DOFs to ident into the list
-		list_to_ident.resize(num_of_DOF);
 		if(!nh_.getParam("/ros_control_iso/list_to_ident", list_to_ident)) {
 			ROS_ERROR("ros_control_iso - identification_server: could not get list to ident");
 			return EXIT_FAILURE;
 		}
+		num_of_DOF = list_to_ident.size();
 
 
 		/// set the first parameter to be identfied.
