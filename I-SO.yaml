@@ -5,7 +5,7 @@ ros_control_iso: #The Identification by Self-Oscillation parameter server parame
     joint: x
     publish_rate: 60
   joint : x # the current DOF that is being identified
-  list_to_ident: [pitch] # the DOFs to identify
+  list_to_ident: [pitch, z] # the DOFs to identify
   identification_server_update_rate: 5
 # The parameters for each axis
   x:
@@ -46,7 +46,7 @@ ros_control_iso: #The Identification by Self-Oscillation parameter server parame
       relay_upper_limit : 0.05
       relay_lower_limit : -0.05
       relay_amplitude_out_inNewtons : 1
-      position_reference : 0
+      position_reference : -0.5
       e_max_error : 0.3
       e_min_error : 0.3
     solution:

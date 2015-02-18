@@ -35,18 +35,12 @@ namespace ros_control_iso{
     */
     int tune_controller::do_work(void) {
 
-        /// find out which DOFs have been identified and which controllers to tune...
-        if(!nh_.getParam("/ros_control_iso/num_of_DOF", num_of_DOF)) {
-            ROS_ERROR("ros_control_iso - identification_server: couldnt get number of DOFs");
-            return EXIT_FAILURE;
-        }
-
         /// fit the DOFs to ident into the list
-        list_to_ident.resize(num_of_DOF);
         if(!nh_.getParam("/ros_control_iso/list_to_ident", list_to_ident)) {
             ROS_ERROR("ros_control_iso - identification_server: could not get list to ident");
             return EXIT_FAILURE;
-        }  
+        }
+        num_of_DOF = list_to_ident.size();
 
         // run the steps for each DOF
         for (int x = 0; x < list_to_ident.size(); x++) {

@@ -38,7 +38,6 @@ private:
 
     ros::NodeHandle nh_;
 
-    int num_of_DOF;
     std::vector<std::string> list_to_ident;    
 
     std::map<std::string,double> hydro_coeffs;
