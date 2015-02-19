@@ -5,7 +5,7 @@ ros_control_iso: #The Identification by Self-Oscillation parameter server parame
     joint: x
     publish_rate: 60
   joint : x # the current DOF that is being identified
-  list_to_ident: [x] # the DOFs to identify
+  list_to_ident: [yaw] # the DOFs to identify
   identification_server_update_rate: 5
 # The parameters for each axis
   x:
@@ -58,10 +58,10 @@ ros_control_iso: #The Identification by Self-Oscillation parameter server parame
     desired_tf: [1.078593438227702e-4,0.011001653069923,0.127599202439703,1]   # denominator [s^0, s^1, s^2, s^3]
   yaw:
     parameters :
-      identification_length : 10
+      identification_length : 5
       relay_upper_limit : 0.0523599 # This should be in RAD
       relay_lower_limit : -0.0523599
-      relay_amplitude_out_inNewtons : 0.2
+      relay_amplitude_out_inNewtons : 1
       position_reference : 0
       e_max_error : 0.3
       e_min_error : 0.3

@@ -240,7 +240,7 @@ namespace ros_control_iso{
     ROS_INFO("%s - current_command: %f, relay_amplitude_out: %f", my_joint.c_str(), joint_.getCommand(), relay_amplitude_out);
 
     //If we have crossed the threshold rising edge and we are still driving upwards-->drive downwards
-    if( (current_position > (relay_upper_limit + position_reference) ) && ( joint_.getCommand() == ( relay_amplitude_out) ) ){
+    if( (current_position >= (relay_upper_limit + position_reference) ) && ( joint_.getCommand() == ( relay_amplitude_out) ) ){
 
 
       command_out = (-1) * relay_amplitude_out;
@@ -253,7 +253,7 @@ namespace ros_control_iso{
     }else
 
     //same for going down-->start driving upwards
-    if( ( current_position < (relay_lower_limit + position_reference) ) && ( joint_.getCommand() == ( (-1) * relay_amplitude_out) ) ){
+    if( ( current_position <= (relay_lower_limit + position_reference) ) && ( joint_.getCommand() == ( (-1) * relay_amplitude_out) ) ){
 
       command_out = relay_amplitude_out;
       joint_.setCommand(command_out);
@@ -337,7 +337,7 @@ namespace ros_control_iso{
   **************************************** */
   void relay_with_hysteresis::do_Identification_Step(void){
     //Update the variables for the identification
-    position_error = position_reference - current_position;
+    position_error = current_position - position_reference;
     tSum += 1/update_rate; //measure the time during this half waveform
 
 
@@ -368,15 +368,18 @@ namespace ros_control_iso{
   * \date 18/Aug/2014
   **************************************** */
   int relay_with_hysteresis::do_Identification_Switched(int rising_falling, const ros::Time& time) {
+    // We have switched the relay to positive
     if ( rising_falling == RISING_EDGE ) {
-      xa_high[counterHigh] = position_error;  // the position value when the switch acctually happened (this might differ from when we wanted it to happen due to delay in the system)
+      xa_low[counterLow] = position_error; // Store the error at which the relay switched to positive - the acctual lower limit
+       // the position value when the switch acctually happened (this might differ from when we wanted it to happen due to delay in the system)
       e_min[counterLow] = minPosition_encountered;   //The minimum position value ever encountered during this half waveform
       t_min[counterLow] = tSum;     //the time taken for this half waveform
       tSum = 0;
       counterLow=(counterLow+1)%identLen;
-
-    }else if (rising_falling == FALLING_EDGE){
-      xa_low[counterLow] = position_error;
+    
+    // We have switched the relay to negative
+    }else if ( rising_falling == FALLING_EDGE ) {
+      xa_high[counterHigh] = position_error; // Store the error at which the relay switched to negative - the acctual upper limit
       e_max[counterHigh] = maxPosition_encountered;
       t_max[counterHigh] = tSum;
       tSum = 0;
