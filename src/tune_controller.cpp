@@ -58,12 +58,13 @@ namespace ros_control_iso{
     /** tune_PID(): turns hydrodynamic coeffs into PID controller values
     */
     void tune_controller::calc_gains(const std::string current_DOF){
-        if (desired_tf_coeffs[3] != 0) {
-            gains["i"] = hydro_coeffs["alpha"] / desired_tf_coeffs[3];
-            gains["d"] = ( desired_tf_coeffs[2] * hydro_coeffs["alpha"] / desired_tf_coeffs[3]) - hydro_coeffs["beta_r"]; 
-            gains["p"] = -1 * ( desired_tf_coeffs[1] * hydro_coeffs["alpha"]) / desired_tf_coeffs[3];
+        if ( (desired_tf_coeffs.at(0) != 0) && (desired_tf_coeffs.at(3) != 1) ) {
+            gains["i"] = hydro_coeffs["alpha"] / desired_tf_coeffs.at(0);
+            gains["d"] = ( desired_tf_coeffs.at(1) * hydro_coeffs["alpha"] / desired_tf_coeffs.at(0)) - hydro_coeffs["beta_r"]; 
+            gains["p"] = -1 * ( desired_tf_coeffs.at(2) * hydro_coeffs["alpha"]) / desired_tf_coeffs.at(0);
         } else {
             ROS_ERROR("ros_control_iso - tune_controller: coefficients for DOF: %s aren't set properly...",current_DOF.c_str());
+            ros::shutdown();
         }
     }
 
