@@ -64,7 +64,7 @@ namespace ros_control_iso{
 		void starting(const ros::Time& );
 		void stopping(const ros::Time& );
 	private:
-		void do_Identification_Step(void);
+		void do_Identification_Step(const ros::Duration&);
 		int do_Identification_Switched(int,  const ros::Time&);
 		void do_Identification_Parameter_Calculation(void);
 		int store_I_SO_Solution(void);

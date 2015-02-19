@@ -60,8 +60,8 @@ namespace ros_control_iso{
     void tune_controller::calc_gains(const std::string current_DOF){
         if ( (desired_tf_coeffs.at(0) != 0) && (desired_tf_coeffs.at(3) == 1) ) {
             gains["i"] = hydro_coeffs["alpha"] / desired_tf_coeffs.at(0);
-            gains["d"] = ( (desired_tf_coeffs.at(1) * hydro_coeffs["alpha"] )/ desired_tf_coeffs.at(0) ) - hydro_coeffs["beta_r"]; 
-            gains["p"] = -1 * ( desired_tf_coeffs.at(2) * hydro_coeffs["alpha"]) / desired_tf_coeffs.at(0);
+            gains["d"] =  desired_tf_coeffs.at(1) * gains["i"]  - hydro_coeffs["beta_r"]; 
+            gains["p"] = desired_tf_coeffs.at(2) * gains["i"];
         } else {
             ROS_ERROR("ros_control_iso - tune_controller: coefficients for DOF: %s aren't set properly: [%f, %f, %f, %f]",current_DOF.c_str(), desired_tf_coeffs.at(0), desired_tf_coeffs.at(1), desired_tf_coeffs.at(2), desired_tf_coeffs.at(3));
             ros::shutdown();

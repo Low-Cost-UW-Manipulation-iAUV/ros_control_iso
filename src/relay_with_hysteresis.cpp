@@ -233,10 +233,10 @@ namespace ros_control_iso{
     static double command_out = relay_amplitude_out;
     current_position = joint_.getPosition();
 
-    do_Identification_Step();
+    do_Identification_Step(period);
 
     //Do the relay's job
-    ROS_INFO("%s - current_position: %f, relay limits [u, l]: [%f, %f]", my_joint.c_str(), current_position, relay_upper_limit, relay_lower_limit);
+    ROS_INFO("%s - current_position: %f, position_error: %f, position_reference: %f,  relay limits [u, l]: [%f, %f]", my_joint.c_str(), current_position, position_error, position_reference, relay_upper_limit, relay_lower_limit);
     ROS_INFO("%s - current_command: %f, relay_amplitude_out: %f", my_joint.c_str(), joint_.getCommand(), relay_amplitude_out);
 
     //If we have crossed the threshold rising edge and we are still driving upwards-->drive downwards
@@ -335,16 +335,16 @@ namespace ros_control_iso{
   * \author Raphael Nagel
   * \date 18/Aug/2014
   **************************************** */
-  void relay_with_hysteresis::do_Identification_Step(void){
+  void relay_with_hysteresis::do_Identification_Step(const ros::Duration& period){
     //Update the variables for the identification
     position_error = current_position - position_reference;
-    tSum += 1/update_rate; //measure the time during this half waveform
+    tSum += period.toSec(); //measure the time during this half waveform
 
 
     //Handle angular values and angular wrapping, maps it into +- pi range
     if (linear_or_angular == ANGULAR) {
       position_error = wrapRad(
-          wrapRad(position_reference) - wrapRad(current_position)
+          wrapRad(current_position) - wrapRad(position_reference)
         );
     }
 
@@ -355,7 +355,7 @@ namespace ros_control_iso{
     if (position_error < minPosition_encountered) {
       minPosition_encountered = position_error;
     }
-
+ROS_INFO("minPosition_encountered: %f, maxPosition_encountered: %f", minPosition_encountered, maxPosition_encountered);
   }
 
   /** do_Identification_Switched() is the ros_control_iso data collection step
@@ -370,18 +370,23 @@ namespace ros_control_iso{
   int relay_with_hysteresis::do_Identification_Switched(int rising_falling, const ros::Time& time) {
     // We have switched the relay to positive
     if ( rising_falling == RISING_EDGE ) {
+      ROS_INFO("ros_control_iso - switched up - rising edge, we are in the undershoot below the lower limit");
+
       xa_low[counterLow] = position_error; // Store the error at which the relay switched to positive - the acctual lower limit
        // the position value when the switch acctually happened (this might differ from when we wanted it to happen due to delay in the system)
-      e_min[counterLow] = minPosition_encountered;   //The minimum position value ever encountered during this half waveform
-      t_min[counterLow] = tSum;     //the time taken for this half waveform
+      e_max[counterHigh] = maxPosition_encountered;
+      maxPosition_encountered = -std::numeric_limits<double>::max();
+      t_max[counterHigh] = tSum;
       tSum = 0;
       counterLow=(counterLow+1)%identLen;
     
     // We have switched the relay to negative
     }else if ( rising_falling == FALLING_EDGE ) {
+      ROS_INFO("ros_control_iso - switched down - falling edge, we are in the overshoot above the upper limit");
       xa_high[counterHigh] = position_error; // Store the error at which the relay switched to negative - the acctual upper limit
-      e_max[counterHigh] = maxPosition_encountered;
-      t_max[counterHigh] = tSum;
+      e_min[counterLow] = minPosition_encountered;   //The minimum position value ever encountered during the half waveform until here
+      minPosition_encountered  = std::numeric_limits<double>::max();
+      t_min[counterLow] = tSum;     //the time taken for this half waveform
       tSum = 0;
       counterHigh=(counterHigh+1)%identLen;
 
@@ -392,9 +397,6 @@ namespace ros_control_iso{
 
     real_time_publish(time);
 
-    //reset the maximum position encountered
-    maxPosition_encountered = -std::numeric_limits<double>::max();
-    minPosition_encountered  = std::numeric_limits<double>::max();
 
     return EXIT_SUCCESS;
   }
@@ -440,8 +442,12 @@ namespace ros_control_iso{
     double Xm = (0.5 * (meanEMax - meanEMin) );  // maximum Amplitude of the waveform
     double X0 = (0.5 * (meanEMax + meanEMin) );  // Find the zero point of the waveform, which is also its offset from 0.
     double xa_star = (0.5 * (meanXaHigh - meanXaLow) );  // Find the mean amplitude of the waveform at switching time. This is basically a standard mean calculationh_. It uses minus because the Xa_low is negative itself--> mean([Xa_high, abs(Xa_low)])
-
     double omega = 2 * M_PI / T;  //
+
+ROS_ERROR("xa_star: %f, meanXaHigh: %f, meanXaLow: %f, meanEMax: %f, meanEMin: %f, Omega: %f", xa_star, meanXaHigh, meanXaLow, meanEMax, meanEMin, omega);
+ROS_ERROR("xa_star: %f, meanXaHigh: %f, meanXaLow: %f, meanEMax: %f, meanEMin: %f, Omega: %f", xa_star, meanXaHigh, meanXaLow, meanEMax, meanEMin, omega);
+ROS_ERROR("xa_star: %f, meanXaHigh: %f, meanXaLow: %f, meanEMax: %f, meanEMin: %f, Omega: %f", xa_star, meanXaHigh, meanXaLow, meanEMax, meanEMin, omega);
+
   //  double C = relay_amplitude_out;
 
     double sq1 = (xa_star + X0) / Xm;
@@ -451,7 +457,7 @@ namespace ros_control_iso{
     sq2 = sqrt(1 - sq2 * sq2);
 
     /// ros_control_iso Parameter calculation
-    solutions[ALPHA] = (2 * relay_amplitude_out * (sq1 + sq2) ) / (M_PI * omega * omega * Xm);
+    solutions[ALPHA] = 2 * relay_amplitude_out * (sq1 + sq2) / (M_PI * omega * omega * Xm);
     solutions[KX]= (4.0 * relay_amplitude_out * xa_star) / (omega * M_PI * Xm * Xm);
     solutions[KXX]= (3.0 * relay_amplitude_out * xa_star) / (2 * omega * omega * Xm * Xm * Xm);
     solutions[DELTA] = relay_amplitude_out * (meanTMax - meanTMin) / (meanTMax + meanTMin);
