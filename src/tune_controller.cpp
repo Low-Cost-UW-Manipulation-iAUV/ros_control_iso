@@ -40,7 +40,6 @@ namespace ros_control_iso{
             ROS_ERROR("ros_control_iso - identification_server: could not get list to ident");
             return EXIT_FAILURE;
         }
-        num_of_DOF = list_to_ident.size();
 
         // run the steps for each DOF
         for (int x = 0; x < list_to_ident.size(); x++) {
